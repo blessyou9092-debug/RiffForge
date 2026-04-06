@@ -413,25 +413,86 @@ const BackingEngine = (() => {
     });
   }
 
-  function playGuitar(freqs, t, dur) {
-    freqs.forEach((freq, fi) => {
-      const strum = fi * 0.018;
-      const st = t + strum;
-      const osc = ctx.createOscillator();
-      osc.type = 'sawtooth';
-      osc.frequency.value = freq / 2;   // 한 옥타브 아래 (따뜻하게)
-      const lpf = ctx.createBiquadFilter();
-      lpf.type = 'lowpass';
-      lpf.frequency.setValueAtTime(2600, st);
-      lpf.frequency.exponentialRampToValueAtTime(550, st + 0.55);
-      const g = ctx.createGain();
-      g.gain.setValueAtTime(0, st);
-      g.gain.linearRampToValueAtTime(volumes.harmony * 0.5, st + 0.006);
-      g.gain.exponentialRampToValueAtTime(0.001, st + Math.min(dur * 0.68, 1.3));
-      osc.connect(lpf); lpf.connect(g); g.connect(masterGain);
-      osc.start(st); osc.stop(st + dur);
+function playGuitar(freqs, t, dur) {
+  // ── 클린톤 일렉기타 ─────────────────────────────────────────────
+  // Karplus-Strong 계열 어프로치:
+  // 1) 피킹 어택: 짧은 노이즈 버스트 (현 튕기는 순간)
+  // 2) 바디 톤: triangle + sine 혼합 (따뜻하고 투명한 클린)
+  // 3) 스트럼 타이밍: 현마다 아주 살짝 지연 (자연스러운 코드 스트럼)
+  // 4) 코러스 효과: 미세 디튠으로 공간감
+
+  freqs.forEach((freq, fi) => {
+    const strum = fi * 0.011; // 스트럼 간격 11ms
+    const st = t + strum;
+
+    // ── 1) 피킹 어택 노이즈 (현 튕기는 찰나) ──────────────────────
+    const noiseLen = Math.floor(ctx.sampleRate * 0.018);
+    const noiseBuf = ctx.createBuffer(1, noiseLen, ctx.sampleRate);
+    const noiseData = noiseBuf.getChannelData(0);
+    for (let i = 0; i < noiseLen; i++) noiseData[i] = (Math.random() * 2 - 1);
+    const noiseSrc = ctx.createBufferSource();
+    noiseSrc.buffer = noiseBuf;
+
+    const noiseHpf = ctx.createBiquadFilter();
+    noiseHpf.type = 'bandpass';
+    noiseHpf.frequency.value = freq * 2.5;
+    noiseHpf.Q.value = 0.8;
+
+    const noiseGain = ctx.createGain();
+    noiseGain.gain.setValueAtTime(volumes.harmony * 0.18, st);
+    noiseGain.gain.exponentialRampToValueAtTime(0.001, st + 0.022);
+
+    noiseSrc.connect(noiseHpf);
+    noiseHpf.connect(noiseGain);
+    noiseGain.connect(masterGain);
+    noiseSrc.start(st);
+    noiseSrc.stop(st + 0.025);
+
+    // ── 2) 메인 톤: triangle (바디) + sine (배음) ─────────────────
+    [[freq, 'triangle', 1.0],
+     [freq * 2, 'sine', 0.28],
+     [freq * 3, 'sine', 0.10]].forEach(([f, type, rel], hi) => {
+
+      // 코러스: 두 개의 오실레이터를 미세하게 디튠
+      [-4, +4].forEach(detuneCents => {
+        const osc = ctx.createOscillator();
+        osc.type = type;
+        osc.frequency.value = f;
+        osc.detune.value = detuneCents;
+
+        // 밝은 피킹 → 자연스럽게 어두워지는 필터 (현의 배음 감쇠 모사)
+        const lpf = ctx.createBiquadFilter();
+        lpf.type = 'lowpass';
+        lpf.frequency.setValueAtTime(freq * 18, st);           // 피킹 순간: 밝게
+        lpf.frequency.exponentialRampToValueAtTime(freq * 4, st + 0.08);  // 빠르게 어두워짐
+        lpf.frequency.exponentialRampToValueAtTime(freq * 2.2, st + dur * 0.6); // 서스테인
+        lpf.Q.value = 0.5;
+
+        // 약한 Presence 부스트 (2~4kHz: 일렉기타 특유의 쨍한 중역)
+        const presence = ctx.createBiquadFilter();
+        presence.type = 'peaking';
+        presence.frequency.value = Math.min(freq * 6, 3200);
+        presence.gain.value = 3.5;
+        presence.Q.value = 1.2;
+
+        const peak = volumes.harmony * rel * 0.38 * (fi === 0 ? 1.2 : 0.9) * 0.5;
+        const g = ctx.createGain();
+        g.gain.setValueAtTime(0, st);
+        g.gain.linearRampToValueAtTime(peak, st + 0.008);          // 빠른 어택
+        g.gain.exponentialRampToValueAtTime(peak * 0.72, st + 0.12); // 초기 감쇠
+        g.gain.exponentialRampToValueAtTime(peak * 0.55, st + dur * 0.5); // 서스테인 유지
+        g.gain.exponentialRampToValueAtTime(0.001, st + Math.min(dur * 0.92, 2.8)); // 릴리즈
+
+        osc.connect(lpf);
+        lpf.connect(presence);
+        presence.connect(g);
+        g.connect(masterGain);
+        osc.start(st);
+        osc.stop(st + Math.min(dur * 0.95, 2.9));
+      });
     });
-  }
+  });
+}
 
   function playSynth(freqs, t, dur) {
     freqs.forEach(freq => {
