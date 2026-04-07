@@ -247,6 +247,9 @@ const PracticeBuilder = (() => {
     };
 
     const existingLog = Storage.getLog(editingDate);
+    const prevMin = existingLog?.totalMin || 0;
+    const xpAwardedDates = Storage.get('rf_xp_dates', []);
+    const isFirstSave = !xpAwardedDates.includes(editingDate);
     const isFirstSave = !existingLog;
     const prevMin = existingLog?.totalMin || 0;
 
@@ -272,6 +275,9 @@ const PracticeBuilder = (() => {
           : 'XP +10 획득! (30분 이상 연습하면 물주기도 받아요)';
         showToast(msg, allCompleted ? 'success' : 'info');
       }
+      // 오늘 날짜 XP 지급 완료로 기록
+      xpAwardedDates.push(editingDate);
+      Storage.set('rf_xp_dates', xpAwardedDates);
     } else {
       showToast('✅ 연습 일지가 수정되었습니다.', 'info');
     }
@@ -926,7 +932,24 @@ const RepertoireTracker = (() => {
   const STATE_LABELS = { learning: 'Learning', polishing: 'Polishing', ready: 'Ready', mastered: 'Mastered' };
 
   function load() { try { return JSON.parse(localStorage.getItem(KEY)) || []; } catch { return []; } }
-  function save(songs) { localStorage.setItem(KEY, JSON.stringify(songs)); }
+  function save(songs) {
+    localStorage.setItem(KEY, JSON.stringify(songs));
+    if (typeof FireDB !== 'undefined' && FireDB.isReady() && FireDB.getUsername()) {
+      FireDB.saveRepertoire(songs).catch(e => console.warn('[Repertoire] 클라우드 저장 실패:', e));
+    }
+  }
+  async function syncFromCloud() {
+    if (typeof FireDB === 'undefined' || !FireDB.getUsername()) return;
+    const cloudSongs = await FireDB.loadRepertoire();
+    if (!cloudSongs) return;
+    const localSongs = load();
+    const localIds = new Set(localSongs.map(s => s.id));
+    const merged = [...localSongs, ...cloudSongs.filter(s => !localIds.has(s.id))];
+    if (merged.length > localSongs.length) {
+      localStorage.setItem(KEY, JSON.stringify(merged));
+      render();
+    }
+  }
 
   function stateFromProgress(pct) {
     if (pct >= 90) return 'mastered';
@@ -1100,7 +1123,8 @@ const RepertoireTracker = (() => {
       </div>`;
   }
 
-  return { addSong, setProgress, setField, removeSong, practiceSong, render };
+  return { addSong, setProgress, setField, removeSong, practiceSong, render, syncFromCloud };
+
 })();
 
 // ═══════════════════════════════════════════════════════════════════════════
