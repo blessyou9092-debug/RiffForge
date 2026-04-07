@@ -190,22 +190,22 @@ const CONFIG = {
     {
       id: 'blues', name: 'Blues Rock Shuffle', emoji: '🎷', colorClass: 'indigo',
       desc: '블루스 셔플 — 솔로잉 기본기',
-      defaultKey: 'A', defaultBpm: 120,
+      defaultKey: 'D', defaultBpm: 120,
       progression: [
-        { r: 'I', t: '7' }, { r: 'IV', t: '7' }, { r: 'V', t: '7' },
-      ],
-      progressionLabel: 'A7 – D7 – E7',
+        { r: 'I', t: '7' }, { r: 'bVII', t: '7' }, { r: 'IV', t: '7' }, { r: 'I', t: '7' },
+],
+      progressionLabel: 'D7 – C7 – G7 – D7',
       recommendScales: ['Blues Scale', 'Minor Pentatonic', 'Major Pentatonic'],
       tip: 'A minor 펜타토닉 기반 블루스 구간 연습용으로 최적. 벤딩·비브라토 필수.',
     },
     {
       id: 'funk', name: 'Funk / Soul', emoji: '🕺', colorClass: 'orange',
       desc: '클린 그루브 — 컷팅 & 16비트 훈련',
-      defaultKey: 'C', defaultBpm: 100,
-      progression: [
-        { r: 'II', t: 'm7' }, { r: 'V', t: '7' }, { r: 'I', t: 'maj7' },
-      ],
-      progressionLabel: 'Dm7 – G7 – Cmaj7',
+defaultKey: 'A', defaultBpm: 100,
+progression: [
+  { r: 'II', t: 'm7' }, { r: 'V', t: '7' }, { r: 'I', t: 'maj7' }, { r: 'VII', t: 'm7' },
+],
+progressionLabel: 'Bm7 – E7 – Amaj7 – G♯m7',
       recommendScales: ['Minor Pentatonic', 'Dorian', 'Major Pentatonic'],
       tip: '오른손 컷팅(뮤트 스트로크)과 16비트 그루브를 강조하세요. 클린톤에서 제일 재미있습니다.',
     },
