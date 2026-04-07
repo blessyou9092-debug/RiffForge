@@ -203,9 +203,9 @@ const CONFIG = {
       desc: '클린 그루브 — 컷팅 & 16비트 훈련',
 defaultKey: 'A', defaultBpm: 100,
 progression: [
-  { r: 'II', t: 'm7' }, { r: 'V', t: '7' }, { r: 'I', t: 'maj7' }, { r: 'VII', t: 'm7' },
+  { r: 'II', t: 'm7' }, { r: 'V', t: '7' }, { r: 'I', t: 'maj7' }, { r: 'VI', t: 'm7' },
 ],
-progressionLabel: 'Bm7 – E7 – Amaj7 – G♯m7',
+progressionLabel: 'Bm7 – E7 – Amaj7 – F♯m7',
       recommendScales: ['Minor Pentatonic', 'Dorian', 'Major Pentatonic'],
       tip: '오른손 컷팅(뮤트 스트로크)과 16비트 그루브를 강조하세요. 클린톤에서 제일 재미있습니다.',
     },
