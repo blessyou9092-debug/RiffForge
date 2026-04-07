@@ -64,9 +64,11 @@ const AppState = (() => {
           renderDashboard();
           console.log('[AppState] 프로필 클라우드 동기화 완료');
         }
-        // 연습일지도 동기화
+// 연습일지 동기화
         await Storage.syncLogsFromCloud();
         CalendarView?.render();
+        // 레퍼토리 동기화
+        await RepertoireTracker?.syncFromCloud();
       });
     }
   }
