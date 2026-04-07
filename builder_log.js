@@ -250,7 +250,6 @@ const PracticeBuilder = (() => {
     const prevMin = existingLog?.totalMin || 0;
     const xpAwardedDates = Storage.get('rf_xp_dates', []);
     const isFirstSave = !xpAwardedDates.includes(editingDate);
-    const prevMin = existingLog?.totalMin || 0;
 
     Storage.setLog(editingDate, log);
 
