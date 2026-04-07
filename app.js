@@ -20,7 +20,13 @@ function showToast(msg, type = 'info') {
   }, 3000);
 }
 
-function getTodayStr() { return new Date().toISOString().split('T')[0]; }
+function getTodayStr() {
+  const d = new Date();
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+}
 
 // ═══════════════════════════════════════════════════════════════════════════
 // AppState: 전역 상태 관리
@@ -96,7 +102,10 @@ const AppState = (() => {
   }
   function updateStreak(dateStr) {
     const yesterday = new Date(); yesterday.setDate(yesterday.getDate() - 1);
-    const yStr = yesterday.toISOString().split('T')[0];
+    const yy = yesterday.getFullYear();
+    const ym = String(yesterday.getMonth() + 1).padStart(2, '0');
+    const yd = String(yesterday.getDate()).padStart(2, '0');
+    const yStr = `${yy}-${ym}-${yd}`;
     if (lastPracticeDate === yStr) streak++;
     else if (lastPracticeDate !== dateStr) streak = 1;
     lastPracticeDate = dateStr; saveAll();
