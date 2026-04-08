@@ -622,6 +622,7 @@ const Pomodoro = (() => {
   let focusMin = CONFIG.POMO.FOCUS_MIN, breakMin = CONFIG.POMO.BREAK_MIN;
   let remaining = focusMin * 60, isRunning = false, isFocus = true;
   let sessionCount = 0, interval = null;
+  let startTime = null, remainingAtStart = 0;
   let bellType = 'beep';
 
   // ── 세션 큐 ──────────────────────────────────────────────────────
@@ -760,8 +761,12 @@ const Pomodoro = (() => {
 
       // 실행 중이었고 시간이 남아 있으면 자동 재개
       if (s.isRunning && remaining > 0) {
-        isRunning = true;
-        interval = setInterval(() => { remaining--; updateDisplay(); if (remaining <= 0) onComplete(); }, 1000);
+        startTime = Date.now(); remainingAtStart = remaining; isRunning = true;
+        interval = setInterval(() => {
+          remaining = Math.max(0, remainingAtStart - Math.floor((Date.now() - startTime) / 1000));
+          updateDisplay();
+          if (remaining <= 0) onComplete();
+        }, 500);
       }
       return true;
     } catch { return false; }
@@ -837,8 +842,17 @@ const Pomodoro = (() => {
   function _bell() { playPomodoroBell(bellType); }
 
   function startStop() {
-    if (isRunning) { clearInterval(interval); isRunning = false; }
-    else { isRunning = true; interval = setInterval(() => { remaining--; updateDisplay(); if (remaining <= 0) onComplete(); }, 1000); }
+    if (isRunning) {
+      remaining = Math.max(0, remainingAtStart - Math.floor((Date.now() - startTime) / 1000));
+      clearInterval(interval); isRunning = false;
+    } else {
+      startTime = Date.now(); remainingAtStart = remaining; isRunning = true;
+      interval = setInterval(() => {
+        remaining = Math.max(0, remainingAtStart - Math.floor((Date.now() - startTime) / 1000));
+        updateDisplay();
+        if (remaining <= 0) onComplete();
+      }, 500);
+    }
     updateDisplay();
   }
   function reset() { clearInterval(interval); isRunning = false; isFocus = true; remaining = focusMin * 60; updateDisplay(); }
