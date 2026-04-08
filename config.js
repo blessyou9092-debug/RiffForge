@@ -38,7 +38,7 @@ const CONFIG = {
   TREE_STAGES: [
     { min: 0, max: 2, emoji: '🌱', name: '씨앗', desc: '이제 막 시작했어요!' },
     { min: 3, max: 7, emoji: '🌿', name: '새싹', desc: '조금씩 자라고 있어요!' },
-    { min: 8, max: 15, emoji: '🪴', name: '어린 나무', desc: '잎이 나기 시작했어요!' },
+    { min: 8, max: 15, emoji: '🌾', name: '어린 나무', desc: '잎이 나기 시작했어요!' },
     { min: 16, max: 29, emoji: '🌳', name: '튼튼한 나무', desc: '매일 연습의 결과예요!' },
     { min: 30, max: 49, emoji: '🎋', name: '성목', desc: '훌륭한 나무가 됐어요!' },
     { min: 50, max: 99, emoji: '🌲', name: '베테랑 나무', desc: '숙련자의 경지입니다!' },
@@ -288,7 +288,7 @@ progressionLabel: 'Bm7 – E7 – Amaj7 – F♯m7',
       tip: '슬라이드·반음 접근법을 적극 활용. 코드톤 중심으로 부드럽고 녹아내리는 멜로디가 어울림.',
     },
     {
-      id: 'kindie_disco', name: 'K-Indie Disco', emoji: '🪩', colorClass: 'emerald',
+      id: 'kindie_disco', name: 'K-Indie Disco', emoji: '🎧', colorClass: 'emerald',
       desc: '찰랑이는 옥타브 바운스와 디스코 비트',
       defaultKey: 'G', defaultBpm: 125,
       progression: [
@@ -296,7 +296,7 @@ progressionLabel: 'Bm7 – E7 – Amaj7 – F♯m7',
       ],
       progressionLabel: 'Am7 – D7 – Gmaj7 – Cmaj7',
       recommendScales: ['Major Pentatonic', 'Dorian', 'Major Scale'],
-      tip: '8비트 정박의 킥 드럼 위에 16비트 고스트 노트를 섞은 스트로크(쨉쨉이)를 얹어보세요. 델리스파이스나 소란 느낌의 곡에 찰떡입니다.',
+      tip: '8비트 정박의 킥 드럼 위에 16비트 고스트 노트를 섞은 스트로크(쨉쨉이)를 얹어보세요.',
     },
     {
       id: 'funk_pop', name: 'Trendy Funk Pop', emoji: '🕶️', colorClass: 'amber',
@@ -323,7 +323,7 @@ progressionLabel: 'Bm7 – E7 – Amaj7 – F♯m7',
   ],
 
   // ─── 음악 이론 ────────────────────────────────────────────────────
-  NOTES: ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'],
+  NOTES: ['C', 'Dd', 'D', 'Ed', 'E', 'F', 'Gd', 'G', 'Ad', 'A', 'Bb', 'B'],
 
   SCALES: {
     'Major': [0, 2, 4, 5, 7, 9, 11],
