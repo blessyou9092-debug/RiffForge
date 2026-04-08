@@ -518,7 +518,7 @@ const AppSidebar = (() => {
     { id: 'repertoire', label: '레퍼토리 트래커', icon: 'fa-guitar' },
     { id: 'ranking', label: '크루 랭킹🚧(미완)', icon: 'fa-ranking-star' },
     { id: 'board', label: '크루 게시판', icon: 'fa-comments' },
-    { id: 'export', label: '성장 스토리', icon: 'fa-book-heart' },
+    { id: 'export', label: '성장 스토리', icon: 'fa-regular fa-heart' },
   ];
 
   function toggle() {
