@@ -165,17 +165,7 @@ const CONFIG = {
   // progression: { r: 로마숫자, t: CHORD_TYPES.id }
   BACKING_TRACKS: [
 
-    {
-      id: 'jpop_rock', name: 'J-Pop Rock', emoji: '🌸', colorClass: 'pink',
-      desc: '밝고 에너제틱한 J-Rock 사운드',
-      defaultKey: 'C', defaultBpm: 150,
-      progression: [
-        { r: 'I', t: 'major' }, { r: 'V', t: 'major' }, { r: 'VI', t: 'minor' }, { r: 'IV', t: 'major' },
-      ],
-      progressionLabel: 'C – G – Am – F',
-      recommendScales: ['Major Scale', 'Major Pentatonic'],
-      tip: '펜타토닉으로도 멜로디가 잘 나오며, 스트로크는 8비트·16비트 골고루 연습하기 좋습니다.',
-    },
+
     {
       id: 'citypop', name: 'City Pop (80s)', emoji: '🌃', colorClass: 'teal',
       desc: '세련된 80s 시티팝 그루브',
@@ -296,6 +286,39 @@ progressionLabel: 'Bm7 – E7 – Amaj7 – F♯m7',
       progressionLabel: 'Fm7 – A♭maj7 – E♭maj7 – Cm7',
       recommendScales: ['Minor Pentatonic', 'Natural Minor', 'Dorian'],
       tip: '슬라이드·반음 접근법을 적극 활용. 코드톤 중심으로 부드럽고 녹아내리는 멜로디가 어울림.',
+    },
+    {
+      id: 'kindie_disco', name: 'K-Indie Disco', emoji: '🪩', colorClass: 'emerald',
+      desc: '찰랑이는 옥타브 바운스와 디스코 비트',
+      defaultKey: 'G', defaultBpm: 125,
+      progression: [
+        { r: 'II', t: 'm7' }, { r: 'V', t: '7' }, { r: 'I', t: 'maj7' }, { r: 'IV', t: 'maj7' },
+      ],
+      progressionLabel: 'Am7 – D7 – Gmaj7 – Cmaj7',
+      recommendScales: ['Major Pentatonic', 'Dorian', 'Major Scale'],
+      tip: '8비트 정박의 킥 드럼 위에 16비트 고스트 노트를 섞은 스트로크(쨉쨉이)를 얹어보세요. 델리스파이스나 소란 느낌의 곡에 찰떡입니다.',
+    },
+    {
+      id: 'funk_pop', name: 'Trendy Funk Pop', emoji: '🕶️', colorClass: 'amber',
+      desc: '브루노 마스 스타일의 세련된 펑크 그루브',
+      defaultKey: 'C', defaultBpm: 115,
+      progression: [
+        { r: 'II', t: 'm7' }, { r: 'V', t: '7' }, { r: 'I', t: 'maj7' }, { r: 'VI', t: '7' },
+      ],
+      progressionLabel: 'Dm7 – G7 – Cmaj7 – A7',
+      recommendScales: ['Minor Pentatonic', 'Dorian', 'Blues Scale'],
+      tip: '1마디(Dm7)와 3마디(Cmaj7)의 첫 박에 강세를 주고, 나머지는 가벼운 커팅 리듬으로 공간을 비워두는 것이 까리함의 핵심입니다.',
+    },
+        {
+      id: 'jpop_rock', name: 'J-Pop Rock', emoji: '🌸', colorClass: 'pink',
+      desc: '밝고 에너제틱한 J-Rock 사운드',
+      defaultKey: 'C', defaultBpm: 150,
+      progression: [
+        { r: 'I', t: 'major' }, { r: 'V', t: 'major' }, { r: 'VI', t: 'minor' }, { r: 'IV', t: 'major' },
+      ],
+      progressionLabel: 'C – G – Am – F',
+      recommendScales: ['Major Scale', 'Major Pentatonic'],
+      tip: '펜타토닉으로도 멜로디가 잘 나오며, 스트로크는 8비트·16비트 골고루 연습하기 좋습니다.',
     },
   ],
 
