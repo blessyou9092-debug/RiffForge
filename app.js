@@ -1481,6 +1481,7 @@ const StudioUI = (() => {
     onSpeedBuilderToggle, showSpeedBuilderInfo,
     startSpeedBuilder, resetSpeedBuilder, updateSpeedBuilderUI,
   };
+    };
 })();
 
 
