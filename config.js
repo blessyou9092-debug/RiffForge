@@ -169,6 +169,21 @@ const CONFIG = {
   // progression: { r: 로마숫자, t: CHORD_TYPES.id }
   BACKING_TRACKS: [
     {
+      id: 'penta_solo',
+      name: 'Pentatonic Solo Jam',
+      emoji: '🎸',
+      colorClass: 'amber',
+      desc: 'Am 펜타 전용 — 솔로 연습 최적',
+      defaultKey: 'A',
+      defaultBpm: 95,
+      progression: [
+        { r: 'I', t: 'minor' }, { r: 'IV', t: 'major' }, { r: 'bVI', t: 'major' }, { r: 'V', t: 'major' }
+      ],
+      progressionLabel: 'Am – D – F – E',
+      recommendScales: ['Minor Pentatonic', 'Blues Scale', 'Natural Minor'],
+      tip: 'A minor pentatonic 하나로 전체 곡 커버 가능. 벤딩·비브라토 중심으로 박자 맞추기 연습에 최적.',
+    },
+    {
       id: 'citypop',
       name: 'City Pop',
       emoji: '🌃',
@@ -272,21 +287,6 @@ const CONFIG = {
       progressionLabel: 'Bm9 – E9 – Amaj9 – F#m9',
       recommendScales: ['Major Scale', 'Dorian', 'Mixolydian'],
       tip: '2–5–1 연결을 의식하면 즉흥연주가 훨씬 자연스럽습니다. 9th 코드가 빚어내는 풍성한 화성을 느껴보세요.',
-    },
-    {
-      id: 'penta_solo',
-      name: 'Pentatonic Solo Jam',
-      emoji: '🎸',
-      colorClass: 'amber',
-      desc: 'Am 펜타 전용 — 솔로 연습 최적',
-      defaultKey: 'A',
-      defaultBpm: 95,
-      progression: [
-        { r: 'I', t: 'minor' }, { r: 'IV', t: 'major' }, { r: 'bVI', t: 'major' }, { r: 'V', t: 'major' }
-      ],
-      progressionLabel: 'Am – D – F – E',
-      recommendScales: ['Minor Pentatonic', 'Blues Scale', 'Natural Minor'],
-      tip: 'A minor pentatonic 하나로 전체 곡 커버 가능. 벤딩·비브라토 중심으로 박자 맞추기 연습에 최적.',
     },
     {
       id: 'dorian_fusion',
