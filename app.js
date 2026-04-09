@@ -900,6 +900,11 @@ const StudioUI = (() => {
   let _bpm = CONFIG.METRONOME.DEFAULT_BPM;
   let _tapTimes = [];
 
+  // ── 스피드 빌더 상태 ─────────────────────────────────────────────
+  let _sbActive = false;
+  let _sbBarCount = 0;
+  let _sbCurrentBpm = 60;
+
   // ── 백킹 상태 ──────────────────────────────────────────────────────
   let selectedGenre = null;
   let selectedKey = 'A';
@@ -1296,6 +1301,97 @@ const StudioUI = (() => {
   }
 
 
+  // ── 스피드 빌더 ─────────────────────────────────────────────────
+  function onSpeedBuilderToggle(checked) {
+    if (window.innerWidth >= 768) return; // 데스크탑: 항상 표시
+    const panel = document.getElementById('speed-builder-panel');
+    if (panel) panel.classList.toggle('hidden', !checked);
+    if (!checked) resetSpeedBuilder();
+  }
+
+  function showSpeedBuilderInfo() {
+    const existing = document.getElementById('sb-info-popup');
+    if (existing) { existing.remove(); return; }
+    const popup = document.createElement('div');
+    popup.id = 'sb-info-popup';
+    popup.className = 'fixed inset-0 z-50 flex items-center justify-center p-4';
+    popup.innerHTML = `
+      <div class="absolute inset-0 bg-black/40" onclick="document.getElementById('sb-info-popup').remove()"></div>
+      <div class="relative bg-white rounded-2xl shadow-xl p-5 max-w-sm w-full z-10">
+        <h3 class="font-black text-gray-800 text-base mb-3">⚡ 스피드 빌더란?</h3>
+        <ul class="text-sm text-gray-600 space-y-2 list-none">
+          <li>🎯 <b>목적:</b> 느린 BPM에서 시작해 목표 속도까지 단계적으로 훈련</li>
+          <li>📐 <b>방법:</b> 지정한 마디 수마다 BPM이 자동으로 올라갑니다</li>
+          <li>⚙️ <b>설정:</b> 시작/목표 BPM, 스텝(+얼마씩), 마디 수(얼마마다) 설정</li>
+          <li>▶ <b>사용법:</b> 메트로놈 START 후 스피드 빌더 ▶ 시작 클릭</li>
+          <li>🏆 <b>챌린지:</b> 완료 시 '보이지 않는 손' 챌린지 진행도 +1</li>
+        </ul>
+        <button onclick="document.getElementById('sb-info-popup').remove()"
+          class="mt-4 w-full py-2 rounded-xl bg-orange-500 text-white font-bold text-sm">확인</button>
+      </div>`;
+    document.body.appendChild(popup);
+  }
+
+  function startSpeedBuilder() {
+    const startBpm = parseInt(document.getElementById('sb-start-bpm')?.value) || 60;
+    const targetBpm = parseInt(document.getElementById('sb-target-bpm')?.value) || 120;
+    if (startBpm >= targetBpm) { showToast('시작 BPM이 목표 BPM보다 작아야 합니다!', 'warning'); return; }
+    _sbCurrentBpm = startBpm;
+    _sbBarCount = 0;
+    _sbActive = true;
+    setBpm(startBpm);
+    updateSpeedBuilderUI();
+    const btn = document.getElementById('sb-start-btn');
+    if (btn) { btn.textContent = '⏸ 진행 중'; btn.style.background = '#10b981'; }
+    showToast(`⚡ 스피드 빌더 시작! ${startBpm} → ${targetBpm} BPM`, 'success');
+  }
+
+  function resetSpeedBuilder() {
+    _sbActive = false;
+    _sbBarCount = 0;
+    const startBpm = parseInt(document.getElementById('sb-start-bpm')?.value) || 60;
+    _sbCurrentBpm = startBpm;
+    updateSpeedBuilderUI();
+    const btn = document.getElementById('sb-start-btn');
+    if (btn) { btn.textContent = '▶ 시작'; btn.style.background = ''; }
+  }
+
+  function _sbOnBar() {
+    if (!_sbActive) return;
+    const barsPerStep = parseInt(document.getElementById('sb-bars')?.value) || 4;
+    const step = parseInt(document.getElementById('sb-step')?.value) || 2;
+    const targetBpm = parseInt(document.getElementById('sb-target-bpm')?.value) || 120;
+    _sbBarCount++;
+    if (_sbBarCount >= barsPerStep) {
+      _sbBarCount = 0;
+      _sbCurrentBpm = Math.min(_sbCurrentBpm + step, targetBpm);
+      setBpm(_sbCurrentBpm);
+      if (_sbCurrentBpm >= targetBpm) {
+        _sbActive = false;
+        showToast('🎉 스피드 빌더 완료! 목표 BPM 달성!', 'success');
+        if (typeof ChallengeTracker !== 'undefined') ChallengeTracker.addSpeedBuilder();
+        const btn = document.getElementById('sb-start-btn');
+        if (btn) { btn.textContent = '✅ 완료'; btn.style.background = '#6366f1'; }
+      }
+    }
+    updateSpeedBuilderUI();
+  }
+
+  function updateSpeedBuilderUI() {
+    const startBpm = parseInt(document.getElementById('sb-start-bpm')?.value) || 60;
+    const targetBpm = parseInt(document.getElementById('sb-target-bpm')?.value) || 120;
+    const barsPerStep = parseInt(document.getElementById('sb-bars')?.value) || 4;
+    const el = document.getElementById('sb-current-bpm');
+    const bar = document.getElementById('sb-progress-bar');
+    const barCountEl = document.getElementById('sb-bar-count');
+    if (el) el.textContent = _sbCurrentBpm;
+    const pct = Math.min(100, Math.round((_sbCurrentBpm - startBpm) / Math.max(1, targetBpm - startBpm) * 100));
+    if (bar) bar.style.width = pct + '%';
+    const ls = document.getElementById('sb-label-start'); if (ls) ls.textContent = startBpm;
+    const lt = document.getElementById('sb-label-target'); if (lt) lt.textContent = targetBpm;
+    if (barCountEl) barCountEl.textContent = _sbActive ? `${_sbBarCount}/${barsPerStep} 마디` : '대기 중';
+  }
+
   // ── 장르 카드 렌더링 ─────────────────────────────────────────────
   function renderGenreCards() {
     const c = document.getElementById('backing-genres');
@@ -1362,6 +1458,8 @@ const StudioUI = (() => {
           setTimeout(() => { btn.style.transform = ''; }, 120);
         }
       });
+      // 스피드 빌더: 첫 박(0)마다 마디 완료 처리
+      if (beat === 0) _sbOnBar();
     });
   }
 
@@ -1375,6 +1473,10 @@ const StudioUI = (() => {
     editChordRoot, editChordType, addChord, removeChord, previewChord,
     // 공통
     onEnter,
+    // 스피드 빌더
+    onSpeedBuilderToggle, showSpeedBuilderInfo,
+    startSpeedBuilder, resetSpeedBuilder, updateSpeedBuilderUI,
+  };
   };
 })();
 
