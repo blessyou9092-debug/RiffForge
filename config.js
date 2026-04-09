@@ -99,10 +99,10 @@ const CONFIG = {
     { id: '7', label: '7', suffix: '7', intervals: [0, 4, 7, 10] },
     { id: 'm7', label: 'm7', suffix: 'm7', intervals: [0, 3, 7, 10] },
     { id: 'm7b5', label: 'm7♭5', suffix: 'm7♭5', intervals: [0, 3, 6, 10] },
-    { id: 'add9', label: 'add9', intervals: [0, 4, 7, 14] },
-    { id: 'M9', label: 'M9', intervals: [0, 4, 7, 11, 14] },
-    { id: 'm9', label: 'm9', intervals: [0, 3, 7, 10, 14] },
-    { id: 'dom9', label: '9', intervals: [0, 4, 7, 10, 14] }
+    { id: 'add9', label: 'add9', suffix: 'add9', intervals: [0, 4, 7, 14] },
+    { id: 'M9', label: 'M9', suffix: 'maj9', intervals: [0, 4, 7, 11, 14] },
+    { id: 'm9', label: 'm9', suffix: 'm9', intervals: [0, 3, 7, 10, 14] },
+    { id: 'dom9', label: '9', suffix: '9', intervals: [0, 4, 7, 10, 14] }
   ],
 
   // ─── 화성 악기 ────────────────────────────────────────────────────
