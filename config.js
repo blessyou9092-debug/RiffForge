@@ -175,7 +175,10 @@ const CONFIG = {
       desc: '세련된 80s 시티팝 그루브',
       defaultKey: 'G', defaultBpm: 108,
       progression: [
-        { r: 'bVII', t: 'maj7' }, { r: 'I', t: '7' }, { r: 'VI', t: 'm7' }, { r: 'II', t: '7' },
+        { r: 'F', t: 'M9' },
+  { r: 'E', t: 'm7' },
+  { r: 'A', t: 'm9' },
+  { r: 'D', t: 'm9' },
       ],
       progressionLabel: 'Fmaj7 – G7 – Em7 – A7',
       recommendScales: ['Major Scale', 'Lydian', 'Major Pentatonic'],
