@@ -230,10 +230,26 @@ const AppState = (() => {
   }
   function getWeekKey() {
     const d = new Date();
-    const start = new Date(d.getFullYear(), 0, 1);
-    const wn = Math.ceil(((d - start) / 86400000 + start.getDay() + 1) / 7);
-    return `${d.getFullYear()}-W${String(wn).padStart(2, '0')}`;
+    const day = d.getDay();
+    const monday = new Date(d);
+    monday.setDate(d.getDate() - (day === 0 ? 6 : day - 1));
+    const y = monday.getFullYear();
+    const mm = String(monday.getMonth() + 1).padStart(2, '0');
+    const dd = String(monday.getDate()).padStart(2, '0');
+    return `${y}-M${mm}${dd}`;
   }
+
+  function seededShuffle(arr, seed) {
+    const a = [...arr];
+    let s = seed;
+    for (let i = a.length - 1; i > 0; i--) {
+      s = (s * 1664525 + 1013904223) & 0xffffffff;
+      const j = Math.abs(s) % (i + 1);
+      [a[i], a[j]] = [a[j], a[i]];
+    }
+    return a;
+  }
+
 
   function renderWeeklyChallenges() {
     const el = document.getElementById('weekly-challenges');
@@ -245,9 +261,9 @@ const AppState = (() => {
     }
     let prog = {};
     try { prog = JSON.parse(localStorage.getItem('rf_chal_prog')) || {}; } catch { }
-    const n = CONFIG.WEEKLY_CHALLENGES.length;
-    const wNum = parseInt(wk.split('-W')[1]);
-    const three = [0, 1, 2].map(i => CONFIG.WEEKLY_CHALLENGES[(wNum + i) % n]);
+    const seed = parseInt(wk.replace(/\D/g, ''));
+    const shuffled = seededShuffle(CONFIG.WEEKLY_CHALLENGES, seed);
+    const three = shuffled.slice(0, 3);
     const doneCount = three.filter(c => (prog[c.id] || 0) >= c.goal).length;
     const PAGE_LABEL = { builder: '연습일지', pomo: '포모도로', repertoire: '레퍼토리 트래커', studio: '메트로놈&백킹' };
     el.innerHTML = `
@@ -828,6 +844,7 @@ const Pomodoro = (() => {
       AppState.addXP(CONFIG.XP.POMO_COMPLETE); AppState.saveAll();
       showToast(`🍅 포모도로 완료! XP +${CONFIG.XP.POMO_COMPLETE}`, 'success');
       _markCurrentDone();
+      if (typeof ChallengeTracker !== 'undefined') ChallengeTracker.addPomo();
       isFocus = false;
       const lng = sessionCount % CONFIG.POMO.SESSIONS_UNTIL_LONG === 0;
       remaining = (lng ? CONFIG.POMO.LONG_BREAK_MIN : breakMin) * 60;
