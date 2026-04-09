@@ -168,166 +168,217 @@ const CONFIG = {
   // ─── 백킹 트랙 장르 ──────────────────────────────────────────────
   // progression: { r: 로마숫자, t: CHORD_TYPES.id }
   BACKING_TRACKS: [
-
-
-    {
-      id: 'citypop', name: 'City Pop (80s)', emoji: '🌃', colorClass: 'teal',
-      desc: '세련된 80s 시티팝 그루브',
-      defaultKey: 'G', defaultBpm: 108,
-      progression: [
-        { r: 'F', t: 'M9' },
-  { r: 'E', t: 'm7' },
-  { r: 'A', t: 'm9' },
-  { r: 'D', t: 'm9' },
-      ],
-      progressionLabel: 'Fmaj7 – G7 – Em7 – A7',
-      recommendScales: ['Major Scale', 'Lydian', 'Major Pentatonic'],
-      tip: '7th 코드 기반 컴핑 & 부드러운 싱코페이션을 넣으면 시티팝 감성이 확 살아납니다.',
-    },
-    {
-      id: 'blues', name: 'Blues Rock Shuffle', emoji: '🎷', colorClass: 'indigo',
-      desc: '블루스 셔플 — 솔로잉 기본기',
-      defaultKey: 'D', defaultBpm: 120,
-      progression: [
-        { r: 'I', t: '7' }, { r: 'bVII', t: '7' }, { r: 'IV', t: '7' }, { r: 'I', t: '7' },
-],
-      progressionLabel: 'D7 – C7 – G7 – D7',
-      recommendScales: ['Blues Scale', 'Minor Pentatonic', 'Major Pentatonic'],
-      tip: 'A minor 펜타토닉 기반 블루스 구간 연습용으로 최적. 벤딩·비브라토 필수.',
-    },
-    {
-      id: 'funk', name: 'Funk / Soul', emoji: '🕺', colorClass: 'orange',
-      desc: '클린 그루브 — 컷팅 & 16비트 훈련',
-defaultKey: 'A', defaultBpm: 100,
-progression: [
-  { r: 'II', t: 'm7' }, { r: 'V', t: '7' }, { r: 'I', t: 'maj7' }, { r: 'VI', t: 'm7' },
-],
-progressionLabel: 'Bm7 – E7 – Amaj7 – F♯m7',
-      recommendScales: ['Minor Pentatonic', 'Dorian', 'Major Pentatonic'],
-      tip: '오른손 컷팅(뮤트 스트로크)과 16비트 그루브를 강조하세요. 클린톤에서 제일 재미있습니다.',
-    },
-    {
-      id: 'hardrock', name: 'Hard Rock / Metal', emoji: '🤘', colorClass: 'red',
-      desc: '파워코드 & 팜뮤트 — 드라이브 사운드',
-      defaultKey: 'E', defaultBpm: 160,
-      progression: [
-        { r: 'I', t: 'minor' }, { r: 'bVI', t: 'major' }, { r: 'bVII', t: 'major' }, { r: 'I', t: 'minor' },
-      ],
-      progressionLabel: 'Em – C – D – Em',
-      recommendScales: ['Natural Minor', 'Minor Pentatonic', 'Blues Scale'],
-      tip: '개방현(E)을 살린 파워코드·팜뮤트 리프 연습에 적합. 알터네이트 피킹 강화.',
-    },
-    {
-      id: 'lofi', name: 'Lo-fi Hip-hop', emoji: '☁️', colorClass: 'slate',
-      desc: '느긋한 Lo-fi 힙합 — 감성 연습',
-      defaultKey: 'G', defaultBpm: 85,
-      progression: [
-        { r: 'II', t: 'm7' }, { r: 'V', t: '7' }, { r: 'I', t: 'maj7' }, { r: 'VI', t: 'm7' },
-      ],
-      progressionLabel: 'Am7 – D9 – Gmaj7 – Em7',
-      recommendScales: ['Major Pentatonic', 'Major Scale', 'Lydian'],
-      tip: '잔잔하게 늘어진 타이밍, 비브라토와 슬라이드로 \'힘 뺀 멜로디\'를 만들기 좋습니다.',
-    },
-    {
-      id: 'poppunk', name: 'Pop-Punk / Emo', emoji: '🎯', colorClass: 'green',
-      desc: '빠르고 신나는 팝펑크 — 파워코드 훈련',
-      defaultKey: 'G', defaultBpm: 170,
-      progression: [
-        { r: 'I', t: 'major' }, { r: 'V', t: 'major' }, { r: 'VI', t: 'minor' }, { r: 'IV', t: 'major' },
-      ],
-      progressionLabel: 'G – D – Em – C',
-      recommendScales: ['Major Pentatonic', 'Major Scale'],
-      tip: '다운피킹 위주 스트럼을 빠르고 단단하게. 멜로디는 단순한 펜타토닉으로도 좋습니다.',
-    },
-    {
-      id: 'smoothjazz', name: 'Smooth Jazz Fusion', emoji: '🎺', colorClass: 'purple',
-      desc: '부드러운 재즈 퓨전 — 코드톤/텐션 훈련',
-      defaultKey: 'A', defaultBpm: 115,
-      progression: [
-        { r: 'II', t: 'm7' }, { r: 'V', t: '7' }, { r: 'I', t: 'maj7' }, { r: 'VI', t: 'm7' },
-      ],
-      progressionLabel: 'Bm7 – E7 – Amaj7 – F#m7',
-      recommendScales: ['Major Scale', 'Dorian', 'Mixolydian'],
-      tip: '2–5–1 연결을 의식하면 즉흥연주가 훨씬 자연스럽습니다. 칼톤(코러스·컴프) 잘 어울림.',
-    },
-    {
-      id: 'penta_solo', name: 'Pentatonic Solo Jam', emoji: '🎸', colorClass: 'amber',
-      desc: 'Am 펜타 전용 — 솔로 연습 최적',
-      defaultKey: 'A', defaultBpm: 95,
-      progression: [
-        { r: 'I', t: 'minor' }, { r: 'IV', t: 'major' }, { r: 'bVI', t: 'major' }, { r: 'V', t: 'major' },
-      ],
-      progressionLabel: 'Am – D – F – E',
-      recommendScales: ['Minor Pentatonic', 'Blues Scale', 'Natural Minor'],
-      tip: 'A minor pentatonic 하나로 전체 곡 커버 가능. 벤딩·비브라토 중심으로 박자 맞추기 연습에 최적.',
-    },
-    {
-      id: 'dorian_fusion', name: 'Mode Study – Dorian', emoji: '🌀', colorClass: 'cyan',
-      desc: 'D 도리안 — 잔잔한 퓨전 그루브',
-      defaultKey: 'D', defaultBpm: 110,
-      progression: [
-        { r: 'I', t: 'm7' }, { r: 'II', t: 'm7' }, { r: 'I', t: 'm7' }, { r: 'IV', t: '7' },
-      ],
-      progressionLabel: 'Dm7 – Em7 – Dm7 – G7',
-      recommendScales: ['Dorian', 'Minor Pentatonic', 'Major Scale'],
-      tip: '도리안 특유의 #6음을 적극 사용(예: B). 재즈·퓨전 느낌의 부드러운 라인 만들기 좋음.',
-    },
-    {
-      id: 'chill_pop', name: 'Chill Ambient Pop', emoji: '🌙', colorClass: 'sky',
-      desc: '촉촉한 감성 — 리버브·딜레이 최적',
-      defaultKey: 'C', defaultBpm: 72,
-      progression: [
-        { r: 'I', t: 'maj7' }, { r: 'VI', t: 'm7' }, { r: 'IV', t: 'maj7' }, { r: 'V', t: 'major' },
-      ],
-      progressionLabel: 'Cmaj7 – Am7 – Fmaj7 – G',
-      recommendScales: ['Major Scale', 'Major Pentatonic', 'Lydian'],
-      tip: '리버브+딜레이 넉넉하게. 멜로디는 공간감을 살려서 길고 느리게.',
-    },
-    {
-      id: 'neosoul', name: 'Dreamy Neo-Soul / R&B', emoji: '✨', colorClass: 'violet',
-      desc: '몽환적 Neo-Soul — 코드톤 멜로디',
-      defaultKey: 'C', defaultBpm: 80,
-      progression: [
-        { r: 'IV', t: 'm7' }, { r: 'bVI', t: 'maj7' }, { r: 'bIII', t: 'maj7' }, { r: 'I', t: 'm7' },
-      ],
-      progressionLabel: 'Fm7 – A♭maj7 – E♭maj7 – Cm7',
-      recommendScales: ['Minor Pentatonic', 'Natural Minor', 'Dorian'],
-      tip: '슬라이드·반음 접근법을 적극 활용. 코드톤 중심으로 부드럽고 녹아내리는 멜로디가 어울림.',
-    },
-    {
-      id: 'kindie_disco', name: 'K-Indie Disco', emoji: '🎧', colorClass: 'emerald',
-      desc: '찰랑이는 옥타브 바운스와 디스코 비트',
-      defaultKey: 'G', defaultBpm: 125,
-      progression: [
-        { r: 'II', t: 'm7' }, { r: 'V', t: '7' }, { r: 'I', t: 'maj7' }, { r: 'IV', t: 'maj7' },
-      ],
-      progressionLabel: 'Am7 – D7 – Gmaj7 – Cmaj7',
-      recommendScales: ['Major Pentatonic', 'Dorian', 'Major Scale'],
-      tip: '8비트 정박의 킥 드럼 위에 16비트 고스트 노트를 섞은 스트로크(쨉쨉이)를 얹어보세요.',
-    },
-    {
-      id: 'funk_pop', name: 'Trendy Funk Pop', emoji: '🕶️', colorClass: 'amber',
-      desc: '브루노 마스 스타일의 세련된 펑크 그루브',
-      defaultKey: 'C', defaultBpm: 115,
-      progression: [
-        { r: 'II', t: 'm7' }, { r: 'V', t: '7' }, { r: 'I', t: 'maj7' }, { r: 'VI', t: '7' },
-      ],
-      progressionLabel: 'Dm7 – G7 – Cmaj7 – A7',
-      recommendScales: ['Minor Pentatonic', 'Dorian', 'Blues Scale'],
-      tip: '1마디(Dm7)와 3마디(Cmaj7)의 첫 박에 강세를 주고, 나머지는 가벼운 커팅 리듬으로 공간을 비워두는 것이 까리함의 핵심입니다.',
-    },
-        {
-      id: 'jpop_rock', name: 'J-Pop Rock', emoji: '🌸', colorClass: 'pink',
-      desc: '밝고 에너제틱한 J-Rock 사운드',
-      defaultKey: 'C', defaultBpm: 150,
-      progression: [
-        { r: 'I', t: 'major' }, { r: 'V', t: 'major' }, { r: 'VI', t: 'minor' }, { r: 'IV', t: 'major' },
-      ],
-      progressionLabel: 'C – G – Am – F',
-      recommendScales: ['Major Scale', 'Major Pentatonic'],
-      tip: '펜타토닉으로도 멜로디가 잘 나오며, 스트로크는 8비트·16비트 골고루 연습하기 좋습니다.',
-    },
-  ],
+  {
+    id: 'citypop',
+    name: 'City Pop',
+    emoji: '🌃',
+    colorClass: 'teal',
+    desc: '세련된 80년대 도심의 밤 — 화려한 텐션 코드',
+    defaultKey: 'C',
+    defaultBpm: 105,
+    progression: [
+      { r: 'IV', t: 'maj7' }, { r: 'III', t: '7' }, { r: 'VI', t: 'm7' }, { r: 'I', t: '7' }
+    ],
+    progressionLabel: 'Fmaj7 – E7 – Am7 – C7',
+    recommendScales: ['Major Scale', 'Minor Pentatonic', 'Dorian'],
+    tip: '화려한 텐션(9, 11, 13)을 포함한 쨉쨉이(커팅)와 코러스 이펙터가 필수적입니다. 특유의 세련된 그루브를 타며 연주해보세요.',
+  },
+  {
+    id: 'blues',
+    name: 'Blues Rock Shuffle',
+    emoji: '🎷',
+    colorClass: 'indigo',
+    desc: '블루스 셔플 — 솔로잉 기본기',
+    defaultKey: 'D',
+    defaultBpm: 120,
+    progression: [
+      { r: 'I', t: '7' }, { r: 'bVII', t: '7' }, { r: 'IV', t: '7' }, { r: 'I', t: '7' }
+    ],
+    progressionLabel: 'D7 – C7 – G7 – D7',
+    recommendScales: ['Blues Scale', 'Minor Pentatonic', 'Major Pentatonic'],
+    tip: 'A minor 펜타토닉 기반 블루스 구간 연습용으로 최적. 벤딩·비브라토 필수.',
+  },
+  {
+    id: 'funk',
+    name: 'Funk / Soul',
+    emoji: '🕺',
+    colorClass: 'orange',
+    desc: '클린 그루브 — 컷팅 & 16비트 훈련',
+    defaultKey: 'A',
+    defaultBpm: 100,
+    progression: [
+      { r: 'II', t: 'm7' }, { r: 'V', t: '7' }, { r: 'I', t: 'maj7' }, { r: 'VI', t: 'm7' }
+    ],
+    progressionLabel: 'Bm7 – E7 – Amaj7 – F♯m7',
+    recommendScales: ['Minor Pentatonic', 'Dorian', 'Major Pentatonic'],
+    tip: '오른손 컷팅(뮤트 스트로크)과 16비트 그루브를 강조하세요. 클린톤에서 제일 재미있습니다.',
+  },
+  {
+    id: 'hardrock',
+    name: 'Hard Rock / Metal',
+    emoji: '🤘',
+    colorClass: 'red',
+    desc: '파워코드 & 팜뮤트 — 드라이브 사운드',
+    defaultKey: 'E',
+    defaultBpm: 160,
+    progression: [
+      { r: 'I', t: 'minor' }, { r: 'bVI', t: 'major' }, { r: 'bVII', t: 'major' }, { r: 'I', t: 'minor' }
+    ],
+    progressionLabel: 'Em – C – D – Em',
+    recommendScales: ['Natural Minor', 'Minor Pentatonic', 'Blues Scale'],
+    tip: '개방현(E)을 살린 파워코드·팜뮤트 리프 연습에 적합. 알터네이트 피킹 강화.',
+  },
+  {
+    id: 'lofi',
+    name: 'Lo-fi Hip-hop',
+    emoji: '☁️',
+    colorClass: 'slate',
+    desc: '느긋한 Lo-fi 힙합 — 감성 연습',
+    defaultKey: 'G',
+    defaultBpm: 85,
+    progression: [
+      { r: 'II', t: 'm7' }, { r: 'V', t: '7' }, { r: 'I', t: 'maj7' }, { r: 'VI', t: 'm7' }
+    ],
+    progressionLabel: 'Am7 – D9 – Gmaj7 – Em7',
+    recommendScales: ['Major Pentatonic', 'Major Scale', 'Lydian'],
+    tip: '잔잔하게 늘어진 타이밍, 비브라토와 슬라이드로 \'힘 뺀 멜로디\'를 만들기 좋습니다.',
+  },
+  {
+    id: 'poppunk',
+    name: 'Pop-Punk / Emo',
+    emoji: '🎯',
+    colorClass: 'green',
+    desc: '빠르고 신나는 팝펑크 — 파워코드 훈련',
+    defaultKey: 'G',
+    defaultBpm: 170,
+    progression: [
+      { r: 'I', t: 'major' }, { r: 'V', t: 'major' }, { r: 'VI', t: 'minor' }, { r: 'IV', t: 'major' }
+    ],
+    progressionLabel: 'G – D – Em – C',
+    recommendScales: ['Major Pentatonic', 'Major Scale'],
+    tip: '다운피킹 위주 스트럼을 빠르고 단단하게. 멜로디는 단순한 펜타토닉으로도 좋습니다.',
+  },
+  {
+    id: 'smoothjazz',
+    name: 'Smooth Jazz Fusion',
+    emoji: '🎺',
+    colorClass: 'purple',
+    desc: '부드러운 재즈 퓨전 — 코드톤/텐션 훈련',
+    defaultKey: 'A',
+    defaultBpm: 115,
+    progression: [
+      { r: 'II', t: 'm7' }, { r: 'V', t: '7' }, { r: 'I', t: 'maj7' }, { r: 'VI', t: 'm7' }
+    ],
+    progressionLabel: 'Bm7 – E7 – Amaj7 – F#m7',
+    recommendScales: ['Major Scale', 'Dorian', 'Mixolydian'],
+    tip: '2–5–1 연결을 의식하면 즉흥연주가 훨씬 자연스럽습니다. 칼톤(코러스·컴프) 잘 어울림.',
+  },
+  {
+    id: 'penta_solo',
+    name: 'Pentatonic Solo Jam',
+    emoji: '🎸',
+    colorClass: 'amber',
+    desc: 'Am 펜타 전용 — 솔로 연습 최적',
+    defaultKey: 'A',
+    defaultBpm: 95,
+    progression: [
+      { r: 'I', t: 'minor' }, { r: 'IV', t: 'major' }, { r: 'bVI', t: 'major' }, { r: 'V', t: 'major' }
+    ],
+    progressionLabel: 'Am – D – F – E',
+    recommendScales: ['Minor Pentatonic', 'Blues Scale', 'Natural Minor'],
+    tip: 'A minor pentatonic 하나로 전체 곡 커버 가능. 벤딩·비브라토 중심으로 박자 맞추기 연습에 최적.',
+  },
+  {
+    id: 'dorian_fusion',
+    name: 'Mode Study – Dorian',
+    emoji: '🌀',
+    colorClass: 'cyan',
+    desc: 'D 도리안 — 잔잔한 퓨전 그루브',
+    defaultKey: 'D',
+    defaultBpm: 110,
+    progression: [
+      { r: 'I', t: 'm7' }, { r: 'II', t: 'm7' }, { r: 'I', t: 'm7' }, { r: 'IV', t: '7' }
+    ],
+    progressionLabel: 'Dm7 – Em7 – Dm7 – G7',
+    recommendScales: ['Dorian', 'Minor Pentatonic', 'Major Scale'],
+    tip: '도리안 특유의 #6음을 적극 사용(예: B). 재즈·퓨전 느낌의 부드러운 라인 만들기 좋음.',
+  },
+  {
+    id: 'chill_pop',
+    name: 'Chill Ambient Pop',
+    emoji: '🌙',
+    colorClass: 'sky',
+    desc: '촉촉한 감성 — 리버브·딜레이 최적',
+    defaultKey: 'C',
+    defaultBpm: 72,
+    progression: [
+      { r: 'I', t: 'maj7' }, { r: 'VI', t: 'm7' }, { r: 'IV', t: 'maj7' }, { r: 'V', t: 'major' }
+    ],
+    progressionLabel: 'Cmaj7 – Am7 – Fmaj7 – G',
+    recommendScales: ['Major Scale', 'Major Pentatonic', 'Lydian'],
+    tip: '리버브+딜레이 넉넉하게. 멜로디는 공간감을 살려서 길고 느리게.',
+  },
+  {
+    id: 'neosoul',
+    name: 'Dreamy Neo-Soul / R&B',
+    emoji: '✨',
+    colorClass: 'violet',
+    desc: '몽환적 Neo-Soul — 코드톤 멜로디',
+    defaultKey: 'C',
+    defaultBpm: 80,
+    progression: [
+      { r: 'IV', t: 'm7' }, { r: 'bVI', t: 'maj7' }, { r: 'bIII', t: 'maj7' }, { r: 'I', t: 'm7' }
+    ],
+    progressionLabel: 'Fm7 – A♭maj7 – E♭maj7 – Cm7',
+    recommendScales: ['Minor Pentatonic', 'Natural Minor', 'Dorian'],
+    tip: '슬라이드·반음 접근법을 적극 활용. 코드톤 중심으로 부드럽고 녹아내리는 멜로디가 어울림.',
+  },
+  {
+    id: 'kindie_disco',
+    name: 'K-Indie Disco',
+    emoji: '🎧',
+    colorClass: 'emerald',
+    desc: '찰랑이는 옥타브 바운스와 디스코 비트',
+    defaultKey: 'G',
+    defaultBpm: 125,
+    progression: [
+      { r: 'II', t: 'm7' }, { r: 'V', t: '7' }, { r: 'I', t: 'maj7' }, { r: 'IV', t: 'maj7' }
+    ],
+    progressionLabel: 'Am7 – D7 – Gmaj7 – Cmaj7',
+    recommendScales: ['Major Pentatonic', 'Dorian', 'Major Scale'],
+    tip: '8비트 정박의 킥 드럼 위에 16비트 고스트 노트를 섞은 스트로크(쨉쨉이)를 얹어보세요.',
+  },
+  {
+    id: 'funk_pop',
+    name: 'Trendy Funk Pop',
+    emoji: '🕶️',
+    colorClass: 'amber',
+    desc: '브루노 마스 스타일의 세련된 펑크 그루브',
+    defaultKey: 'C',
+    defaultBpm: 115,
+    progression: [
+      { r: 'II', t: 'm7' }, { r: 'V', t: '7' }, { r: 'I', t: 'maj7' }, { r: 'VI', t: '7' }
+    ],
+    progressionLabel: 'Dm7 – G7 – Cmaj7 – A7',
+    recommendScales: ['Minor Pentatonic', 'Dorian', 'Blues Scale'],
+    tip: '1마디(Dm7)와 3마디(Cmaj7)의 첫 박에 강세를 주고, 나머지는 가벼운 커팅 리듬으로 공간을 비워두는 것이 까리함의 핵심입니다.',
+  },
+  {
+    id: 'jpop_rock',
+    name: 'J-Pop Rock',
+    emoji: '🌸',
+    colorClass: 'pink',
+    desc: '밝고 에너제틱한 J-Rock 사운드',
+    defaultKey: 'C',
+    defaultBpm: 150,
+    progression: [
+      { r: 'I', t: 'major' }, { r: 'V', t: 'major' }, { r: 'VI', t: 'minor' }, { r: 'IV', t: 'major' }
+    ],
+    progressionLabel: 'C – G – Am – F',
+    recommendScales: ['Major Scale', 'Major Pentatonic'],
+    tip: '펜타토닉으로도 멜로디가 잘 나오며, 스트로크는 8비트·16비트 골고루 연습하기 좋습니다.',
+  }
+]
 
   // ─── 음악 이론 ────────────────────────────────────────────────────
   NOTES: ['C', 'Dd', 'D', 'Ed', 'E', 'F', 'Gd', 'G', 'Ad', 'A', 'Bb', 'B'],
