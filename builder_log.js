@@ -283,6 +283,7 @@ const PracticeBuilder = (() => {
     // 스트릭 업데이트
     AppState.updateStreak(editingDate);
     AppState.saveAll();
+    if (typeof ChallengeTracker !== 'undefined') ChallengeTracker.recalc();
     AppState.renderDashboard();
     CalendarView.render();
     return log;
@@ -976,33 +977,8 @@ const RepertoireTracker = (() => {
     save(songs);
     document.getElementById('rep-title').value = '';
     document.getElementById('rep-artist').value = '';
+    if (typeof ChallengeTracker !== 'undefined') ChallengeTracker.addRepSong();
     render();
-  }
-
-  function setProgress(id, pct) {
-    const songs = load();
-    const song = songs.find(s => s.id === id);
-    if (!song) return;
-    song.progress = pct;
-    song.state = stateFromProgress(pct);
-    if (song.state === 'mastered' && !song.masteredAt) song.masteredAt = new Date().toISOString();
-    save(songs);
-    render();
-  }
-
-  function setField(id, field, value) {
-    const songs = load();
-    const song = songs.find(s => s.id === id);
-    if (!song) return;
-    song[field] = value;
-    save(songs);
-  }
-
-  function practiceSong(id) {
-    const song = load().find(s => s.id === id);
-    if (!song) return;
-    AppSidebar.setActive('builder');
-    setTimeout(() => PracticeBuilder.addSongSession(song.title, song.bpm), 400);
   }
 
   function stateFromProgress(pct) {
@@ -1016,10 +992,12 @@ const RepertoireTracker = (() => {
     const songs = load();
     const s = songs.find(s => s.id === id);
     if (!s) return;
+    const oldState = s.state;
     s.progress = pct;
     s.state = stateFromProgress(pct);
     if (s.state === 'mastered' && !s.masteredAt) s.masteredAt = new Date().toISOString();
     save(songs);
+    if (typeof ChallengeTracker !== 'undefined') ChallengeTracker.addRepLevelUp(oldState, s.state);
     render();
   }
 
@@ -1124,6 +1102,104 @@ const RepertoireTracker = (() => {
   return { addSong, setProgress, setField, removeSong, practiceSong, render, syncFromCloud };
 
 })();
+// ═══════════════════════════════════════════════════════════════════════════
+// ChallengeTracker: 주간 챌린지 진행률 추적
+// ═══════════════════════════════════════════════════════════════════════════
+const ChallengeTracker = (() => {
+  function _weekKey() {
+    const d = new Date();
+    const day = d.getDay();
+    const monday = new Date(d);
+    monday.setDate(d.getDate() - (day === 0 ? 6 : day - 1));
+    const y = monday.getFullYear();
+    const mm = String(monday.getMonth() + 1).padStart(2, '0');
+    const dd = String(monday.getDate()).padStart(2, '0');
+    return `${y}-M${mm}${dd}`;
+  }
+
+  function _getWeekDates() {
+    const d = new Date();
+    const day = d.getDay();
+    const monday = new Date(d);
+    monday.setDate(d.getDate() - (day === 0 ? 6 : day - 1));
+    const dates = [];
+    for (let i = 0; i < 7; i++) {
+      const dt = new Date(monday);
+      dt.setDate(monday.getDate() + i);
+      const y = dt.getFullYear();
+      const m = String(dt.getMonth() + 1).padStart(2, '0');
+      const dd = String(dt.getDate()).padStart(2, '0');
+      dates.push(`${y}-${m}-${dd}`);
+    }
+    return dates;
+  }
+
+  function _getProg() {
+    const wk = _weekKey();
+    const stored = Storage.get('rf_chal_week_app');
+    if (stored !== wk) {
+      Storage.set('rf_chal_week_app', wk);
+      Storage.set('rf_chal_prog', {});
+      return {};
+    }
+    return Storage.get('rf_chal_prog', {});
+  }
+
+  function _setProg(prog) {
+    Storage.set('rf_chal_week_app', _weekKey());
+    Storage.set('rf_chal_prog', prog);
+  }
+
+  function _inc(id, amount) {
+    const prog = _getProg();
+    prog[id] = (prog[id] || 0) + amount;
+    _setProg(prog);
+    if (typeof AppState !== 'undefined') AppState.renderDashboard();
+  }
+
+  function recalc() {
+    const weekDates = _getWeekDates();
+    let practiceDays = 0, totalMin = 0, waterDays = 0;
+    let theoryDays = 0, warmupCount = 0, perfectDays = 0;
+    weekDates.forEach(dateStr => {
+      const log = Storage.getLog(dateStr);
+      if (!log) return;
+      practiceDays++;
+      totalMin += log.totalMin || 0;
+      if ((log.totalMin || 0) >= 30) waterDays++;
+      if ((log.sessions || []).some(s => s.type === 'theory')) theoryDays++;
+      warmupCount += (log.sessions || []).filter(s => s.type === 'warmup').length;
+      if (log.allCompleted) perfectDays++;
+    });
+    const prog = _getProg();
+    prog['practice_5days'] = practiceDays;
+    prog['total_120min'] = totalMin;
+    prog['water_3times'] = waterDays;
+    prog['theory_2days'] = theoryDays;
+    prog['warmup_3'] = warmupCount;
+    prog['perfect_set'] = perfectDays;
+    _setProg(prog);
+    if (typeof AppState !== 'undefined') AppState.renderDashboard();
+  }
+
+  function addPomo() { _inc('pomo_5sessions', 1); }
+  function addSpeedBuilder() { _inc('speed_builder_2', 1); }
+
+  function addRepSong() {
+    const prog = _getProg();
+    prog['rep_add_1'] = (prog['rep_add_1'] || 0) + 1;
+    _setProg(prog);
+    if (typeof AppState !== 'undefined') AppState.renderDashboard();
+  }
+
+  function addRepLevelUp(oldState, newState) {
+    const order = ['learning', 'polishing', 'ready', 'mastered'];
+    if (order.indexOf(newState) > order.indexOf(oldState)) _inc('rep_level_up', 1);
+  }
+
+  return { recalc, addPomo, addSpeedBuilder, addRepSong, addRepLevelUp };
+})();
+
 
 // ═══════════════════════════════════════════════════════════════════════════
 // CrewRanking: 크루 랭킹 — 세로형 카드 + 팝업 순위
