@@ -1155,14 +1155,13 @@
                     oninput="StudioUI.setMetroVolume(this.value)" class="w-full accent-orange-500" />
                 </div>
 
-                <!-- ── 스피드 빌더 ──────────────────────────── -->
+                <!-- ── 스피드 빌더 ──────────────────────── -->
                 <div class="border-t border-gray-100 pt-2">
                   <div class="flex items-center justify-between mb-1">
-                    <div class="flex items-center gap-1">
+                    <div class="flex items-center gap-1.5">
                       <span class="text-[11px] font-black text-gray-700">⚡ 스피드 빌더</span>
                       <button onclick="StudioUI.showSpeedBuilderInfo()"
-                        class="text-[11px] text-gray-400 hover:text-orange-500 transition-colors w-4 h-4 flex items-center justify-center rounded-full border border-gray-300 hover:border-orange-400 leading-none font-bold"
-                        title="스피드 빌더 설명">ⓘ</button>
+                        class="w-4 h-4 text-[10px] font-black text-gray-400 hover:text-orange-500 border border-gray-300 hover:border-orange-400 rounded-full flex items-center justify-center transition-colors leading-none">ⓘ</button>
                     </div>
                     <label class="relative inline-flex items-center cursor-pointer">
                       <input type="checkbox" id="toggle-speed-builder" class="sr-only peer"
@@ -1173,8 +1172,7 @@
                         peer-checked:after:translate-x-4"></div>
                     </label>
                   </div>
-                  <!-- 패널: 모바일 toggle off → hidden / desktop 항상 표시 -->
-                  <div id="speed-builder-panel" class="hidden md:block space-y-2">
+                  <div id="speed-builder-panel" class="hidden space-y-2">
                     <div class="grid grid-cols-2 gap-1.5">
                       <div>
                         <p class="text-[9px] font-bold text-gray-400 mb-0.5">시작 BPM</p>
@@ -1199,7 +1197,7 @@
                           class="w-full text-center text-sm font-black border border-gray-200 rounded-lg px-1 py-1 focus:outline-none focus:border-orange-400" />
                       </div>
                     </div>
-                    <div class="text-center">
+                    <div class="text-center py-1">
                       <span class="text-[10px] text-gray-400 font-bold">현재</span>
                       <span id="sb-current-bpm" class="text-xl font-black text-orange-500 mx-1">60</span>
                       <span class="text-[10px] text-gray-400 font-bold">BPM</span>
@@ -1229,7 +1227,6 @@
 
               </div>
             </div>
-
 
             <!-- ─── CENTER: 코드 진행 + 지판 ──────────────────────────── -->
             <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden flex flex-col">
