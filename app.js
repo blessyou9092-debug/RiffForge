@@ -900,7 +900,7 @@ const StudioUI = (() => {
   let _bpm = CONFIG.METRONOME.DEFAULT_BPM;
   let _tapTimes = [];
 
-  // ── 스피드 빌더 상태 ─────────────────────────────────────────────
+  // ── 스피드 빌더 상태 ────────────────────────────────────────────
   let _sbActive = false;
   let _sbBarCount = 0;
   let _sbCurrentBpm = 60;
@@ -1301,11 +1301,11 @@ const StudioUI = (() => {
   }
 
 
-  // ── 스피드 빌더 ─────────────────────────────────────────────────
+  // ──   // ── 스피드 빌더 ─────────────────────────────────────────────────
   function onSpeedBuilderToggle(checked) {
-    if (window.innerWidth >= 768) return; // 데스크탑: 항상 표시
     const panel = document.getElementById('speed-builder-panel');
-    if (panel) panel.classList.toggle('hidden', !checked);
+    if (!panel) return;
+    panel.classList.toggle('hidden', !checked);
     if (!checked) resetSpeedBuilder();
   }
 
@@ -1319,15 +1319,19 @@ const StudioUI = (() => {
       <div class="absolute inset-0 bg-black/40" onclick="document.getElementById('sb-info-popup').remove()"></div>
       <div class="relative bg-white rounded-2xl shadow-xl p-5 max-w-sm w-full z-10">
         <h3 class="font-black text-gray-800 text-base mb-3">⚡ 스피드 빌더란?</h3>
-        <ul class="text-sm text-gray-600 space-y-2 list-none">
-          <li>🎯 <b>목적:</b> 느린 BPM에서 시작해 목표 속도까지 단계적으로 훈련</li>
-          <li>📐 <b>방법:</b> 지정한 마디 수마다 BPM이 자동으로 올라갑니다</li>
-          <li>⚙️ <b>설정:</b> 시작/목표 BPM, 스텝(+얼마씩), 마디 수(얼마마다) 설정</li>
-          <li>▶ <b>사용법:</b> 메트로놈 START 후 스피드 빌더 ▶ 시작 클릭</li>
-          <li>🏆 <b>챌린지:</b> 완료 시 '보이지 않는 손' 챌린지 진행도 +1</li>
+        <ul class="text-sm text-gray-600 space-y-2">
+          <li>🎯 <b>목적:</b> 느린 BPM에서 시작해 목표 속도까지 단계적으로 훈련합니다.</li>
+          <li>📐 <b>작동 방식:</b> 설정한 마디 수마다 BPM이 자동으로 올라갑니다.</li>
+          <li>⚙️ <b>설정 항목:</b><br>
+            · 시작/목표 BPM — 훈련 범위<br>
+            · 스텝 — 한 번에 올라가는 BPM<br>
+            · 마디 수 — 몇 마디마다 BPM을 올릴지
+          </li>
+          <li>▶ <b>사용법:</b> START로 메트로놈을 켠 뒤 ▶ 시작을 클릭하세요.</li>
+          <li>🏆 완료 시 <b>'보이지 않는 손'</b> 챌린지 +1 진행됩니다.</li>
         </ul>
         <button onclick="document.getElementById('sb-info-popup').remove()"
-          class="mt-4 w-full py-2 rounded-xl bg-orange-500 text-white font-bold text-sm">확인</button>
+          class="mt-4 w-full py-2 rounded-xl bg-orange-500 hover:bg-orange-600 text-white font-bold text-sm transition-colors">확인</button>
       </div>`;
     document.body.appendChild(popup);
   }
@@ -1336,13 +1340,14 @@ const StudioUI = (() => {
     const startBpm = parseInt(document.getElementById('sb-start-bpm')?.value) || 60;
     const targetBpm = parseInt(document.getElementById('sb-target-bpm')?.value) || 120;
     if (startBpm >= targetBpm) { showToast('시작 BPM이 목표 BPM보다 작아야 합니다!', 'warning'); return; }
+    if (_sbActive) { resetSpeedBuilder(); return; }
     _sbCurrentBpm = startBpm;
     _sbBarCount = 0;
     _sbActive = true;
     setBpm(startBpm);
     updateSpeedBuilderUI();
     const btn = document.getElementById('sb-start-btn');
-    if (btn) { btn.textContent = '⏸ 진행 중'; btn.style.background = '#10b981'; }
+    if (btn) { btn.textContent = '⏸ 일시정지'; btn.style.background = '#10b981'; }
     showToast(`⚡ 스피드 빌더 시작! ${startBpm} → ${targetBpm} BPM`, 'success');
   }
 
@@ -1458,7 +1463,6 @@ const StudioUI = (() => {
           setTimeout(() => { btn.style.transform = ''; }, 120);
         }
       });
-      // 스피드 빌더: 첫 박(0)마다 마디 완료 처리
       if (beat === 0) _sbOnBar();
     });
   }
