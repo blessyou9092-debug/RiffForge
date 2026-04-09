@@ -1046,8 +1046,8 @@ const StudioUI = (() => {
   }
 
   // 반음 → 음정 이름
-  const _IV_NAME = { 0: 'R', 1: '♭2', 2: '2', 3: '♭3', 4: '3', 5: '4', 6: '♭5', 7: '5', 8: '♭6', 9: '6', 10: '♭7', 11: '7' };
-
+  const _IV_NAME = { 0: 'R', 1: '♭2', 2: '2', 3: '♭3', 4: '3', 5: '4', 6: '♭5', 7: '5', 8: '♭6', 9: '6', 10: '♭7', 11: '7', 14: '9' };
+  
   // 루트+현재키 → 로마 숫자 (도수)
   const _ROMAN_LABEL = { 0: 'Ⅰ', 1: '♭Ⅱ', 2: 'Ⅱ', 3: '♭Ⅲ', 4: 'Ⅲ', 5: 'Ⅳ', 6: '♭Ⅴ', 7: 'Ⅴ', 8: '♭Ⅵ', 9: 'Ⅵ', 10: '♭Ⅶ', 11: 'Ⅶ' };
   function _getRoman(root) {
@@ -1162,8 +1162,8 @@ const StudioUI = (() => {
   }
 
   // ── 코드톤 범례 동적 업데이트 ────────────────────────────────────
-  const _SEMI_LABEL = { 0: 'R', 1: '♭2', 2: '2', 3: '♭3', 4: '3', 5: '4', 6: '♭5', 7: '5', 8: '♭6', 9: '6', 10: '♭7', 11: '7' };
-  const _ROLE_COLOR = ['bg-amber-400', 'bg-lime-400', 'bg-sky-400', 'bg-purple-400'];
+  const _SEMI_LABEL = { 0: 'R', 1: '♭2', 2: '2', 3: '♭3', 4: '3', 5: '4', 6: '♭5', 7: '5', 8: '♭6', 9: '6', 10: '♭7', 11: '7', 14: '9' };
+  const _ROLE_COLOR = ['bg-amber-400', 'bg-lime-400', 'bg-sky-400', 'bg-purple-400', 'bg-pink-400'];
 
   function updateChordLegend(chord) {
     const el = document.getElementById('chord-tone-legend');
@@ -1952,7 +1952,7 @@ const ReferenceUI = (() => {
   function _buildChordNoteMap(root, type) {
     const ct = CONFIG.CHORD_TYPES.find(c => c.id === type);
     const intervals = ct?.intervals || [0, 4, 7];
-    const roles = ['root', 'third', 'fifth', 'seventh'];
+    const roles = ['root', 'third', 'fifth', 'seventh', 'ninth'];
     const ri = CONFIG.NOTES.indexOf(root);
     const map = new Map();
     intervals.forEach((iv, i) => map.set(CONFIG.NOTES[(ri + iv) % 12], roles[i]));
@@ -1964,9 +1964,10 @@ const ReferenceUI = (() => {
     third: { fill: '#22c55e', stroke: '#16a34a', textFill: '#fff' },
     fifth: { fill: '#3b82f6', stroke: '#2563eb', textFill: '#fff' },
     seventh: { fill: '#a855f7', stroke: '#7c3aed', textFill: '#fff' },
+    ninth: { fill: '#ec4899', stroke: '#be185d', textFill: '#fff' },
   };
-  const _CT_LBL = { root: 'R', third: '3', fifth: '5', seventh: '7' };
-  const _SEMI_LBL = { 0: 'R', 1: '♭2', 2: '2', 3: '♭3', 4: '3', 5: '4', 6: '♭5', 7: '5', 8: '♭6', 9: '6', 10: '♭7', 11: '7' };
+  const _CT_LBL = { root: 'R', third: '3', fifth: '5', seventh: '7', ninth: '9' };
+  const _SEMI_LBL = { 0: 'R', 1: '♭2', 2: '2', 3: '♭3', 4: '3', 5: '4', 6: '♭5', 7: '5', 8: '♭6', 9: '6', 10: '♭7', 11: '7', 14: '9' };
 
   function renderChordToneRef() {
     const map = _buildChordNoteMap(_chordToneRoot, _chordToneType);
@@ -1992,7 +1993,7 @@ const ReferenceUI = (() => {
       const ct = CONFIG.CHORD_TYPES.find(c => c.id === _chordToneType);
       const intervals = ct?.intervals || [0, 4, 7];
       const ri = CONFIG.NOTES.indexOf(_chordToneRoot);
-      const roleColors = ['bg-red-500', 'bg-green-500', 'bg-blue-500', 'bg-purple-500'];
+      const roleColors = ['bg-red-500', 'bg-green-500', 'bg-blue-500', 'bg-purple-500', 'bg-pink-500'];
       legend.innerHTML = intervals.map((iv, i) => {
         const note = CONFIG.NOTES[(ri + iv) % 12];
         return `<span class="flex items-center gap-1">
