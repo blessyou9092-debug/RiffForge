@@ -47,6 +47,7 @@ const AppState = (() => {
     weeklyMin = Storage.get(CONFIG.KEYS.WEEKLY_MIN, [0, 0, 0, 0, 0, 0, 0]);
     totalMin = Storage.get(CONFIG.KEYS.TOTAL_MIN, 0);
     applyTheme(Storage.get(CONFIG.KEYS.THEME, 'amber'));
+    streak = recalcStreak(); // 실제 로그 기반으로 스트릭 재계산
 
     // Firestore에서 최신 프로필 동기화 (Firebase 준비 후)
     if (typeof FireDB !== 'undefined') {
@@ -56,7 +57,6 @@ const AppState = (() => {
           // 클라우드 값이 로컬보다 크면 덮어씀 (다른 기기에서 진행한 경우)
           if ((profile.xp || 0) > xp) { xp = profile.xp; Storage.set(CONFIG.KEYS.XP, xp); }
           if ((profile.water || 0) > water) { water = profile.water; Storage.set(CONFIG.KEYS.WATER, water); }
-          if ((profile.streak || 0) >= streak) { streak = profile.streak; Storage.set(CONFIG.KEYS.STREAK, streak); }
           if (profile.totalMin > totalMin) { totalMin = profile.totalMin; Storage.set(CONFIG.KEYS.TOTAL_MIN, totalMin); }
           if (profile.weeklyMin) { weeklyMin = profile.weeklyMin; Storage.set(CONFIG.KEYS.WEEKLY_MIN, weeklyMin); }
           if (profile.lastPracticeDate) { lastPracticeDate = profile.lastPracticeDate; Storage.set(CONFIG.KEYS.LAST_PRACTICE_DATE, lastPracticeDate); }
@@ -73,8 +73,10 @@ const AppState = (() => {
           renderDashboard();
           console.log('[AppState] 프로필 클라우드 동기화 완료');
         }
-// 연습일지 동기화
+        // 연습일지 동기화
         await Storage.syncLogsFromCloud();
+        streak = recalcStreak(); // 클라우드 일지 동기화 후 재계산
+        Storage.set(CONFIG.KEYS.STREAK, streak);
         CalendarView?.render();
         // 레퍼토리 동기화
         await RepertoireTracker?.syncFromCloud();
@@ -114,16 +116,50 @@ const AppState = (() => {
   function addWater() {
     water++; saveAll(); renderStats(); checkHarvest();
   }
-  function updateStreak(dateStr) {
-    const yesterday = new Date(); yesterday.setDate(yesterday.getDate() - 1);
-    const yy = yesterday.getFullYear();
-    const ym = String(yesterday.getMonth() + 1).padStart(2, '0');
-    const yd = String(yesterday.getDate()).padStart(2, '0');
-    const yStr = `${yy}-${ym}-${yd}`;
-    if (lastPracticeDate === yStr) streak++;
-    else if (lastPracticeDate !== dateStr) streak = 1;
-    lastPracticeDate = dateStr; saveAll();
+    function _logDateStr(d) {
+    return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
   }
+
+  function recalcStreak() {
+    const todayStr = getTodayStr();
+    const todayLog = Storage.getLog(todayStr);
+    const practicedToday = (todayLog?.totalMin || 0) > 0;
+    let checkDate = new Date();
+    let count = 0;
+
+    if (practicedToday) {
+      count = 1;
+      checkDate.setDate(checkDate.getDate() - 1);
+    } else {
+      // 오늘 미연습 → 어제부터 확인
+      checkDate.setDate(checkDate.getDate() - 1);
+      const yLog = Storage.getLog(_logDateStr(checkDate));
+      if (!yLog || (yLog.totalMin || 0) === 0) return 0; // 어제도 없으면 스트릭 0
+      count = 1;
+      checkDate.setDate(checkDate.getDate() - 1);
+    }
+
+    // 이전 날짜들을 연속으로 확인
+    for (let i = 0; i < 365; i++) {
+      const log = Storage.getLog(_logDateStr(checkDate));
+      if (log && (log.totalMin || 0) > 0) {
+        count++;
+        checkDate.setDate(checkDate.getDate() - 1);
+      } else {
+        break;
+      }
+    }
+    return count;
+  }
+
+  function updateStreak(dateStr) {
+    if (!lastPracticeDate || dateStr >= lastPracticeDate) {
+      lastPracticeDate = dateStr;
+    }
+    streak = recalcStreak();
+    saveAll();
+  }
+
   function checkHarvest() {
     const harvested = Storage.get(CONFIG.KEYS.HARVEST, []);
     CONFIG.HARVEST_ITEMS.forEach(item => {
@@ -221,7 +257,7 @@ const AppState = (() => {
 
   function renderStats() {
     const tm = formatMin(totalMin);
-    const practicedToday = lastPracticeDate === getTodayStr();
+    const practicedToday = (Storage.getLog(getTodayStr())?.totalMin || 0) > 0;
     [['stat-water', water], ['stat-water-hdr', water], ['stat-totalmin-hdr', tm]]
       .forEach(([id, val]) => { const e = document.getElementById(id); if (e) e.textContent = val; });
     ['stat-streak', 'stat-streak-hdr'].forEach(id => {
@@ -242,7 +278,7 @@ const AppState = (() => {
     ['dash-totalmin', formatMin(totalMin)],
     ['dash-tree-emoji', stage.emoji], ['dash-tree-name', stage.name]
     ].forEach(([id, val]) => { const e = document.getElementById(id); if (e) e.textContent = val; });
-    const practicedToday = lastPracticeDate === getTodayStr();
+    const practicedToday = (Storage.getLog(getTodayStr())?.totalMin || 0) > 0;
     const se = document.getElementById('dash-streak');
     if (se) { se.textContent = streak + '일'; se.style.color = practicedToday ? '' : '#9ca3af'; }
     renderWeekChart();
