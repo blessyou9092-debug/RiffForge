@@ -386,6 +386,17 @@ const AppState = (() => {
         .filter(k => k.startsWith('rf_') && k !== CONFIG.KEYS.USERNAME)
         .forEach(k => localStorage.removeItem(k));
     }
+  function logout() {
+    const name = Storage.get(CONFIG.KEYS.USERNAME, '') || '사용자';
+    if (!confirm(`${name}님 계정에서 로그아웃하시겠습니까?\n\n서버 데이터는 유지되며, 다음 로그인 시 복원됩니다.`)) return;
+
+    // rf_ 로 시작하는 모든 로컬 데이터 삭제
+    Object.keys(localStorage)
+      .filter(k => k.startsWith('rf_'))
+      .forEach(k => localStorage.removeItem(k));
+
+    location.reload();
+  }
 
     Storage.set(CONFIG.KEYS.USERNAME, trimmed);
 
@@ -772,7 +783,7 @@ function renderGreeting() {
     showChallengePopup,
     getXp: () => xp, getWater: () => water, getStreak: () => streak,
     navigate,
-    setTheme, editUsername, formatMin,
+    setTheme, editUsername, logout, formatMin,
     addTotalMin: (m) => {
       totalMin += m;
       seasonMin = Math.max(0, seasonMin + m);
