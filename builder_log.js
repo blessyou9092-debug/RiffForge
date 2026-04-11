@@ -1466,37 +1466,31 @@ const RepertoireTracker = (() => {
 // ═══════════════════════════════════════════════════════════════════════════
 const ChallengeTracker = (() => {
   function _weekKey() {
-    const d = new Date();
-    const day = d.getDay();
+    const d = new Date(), day = d.getDay();
     const monday = new Date(d);
     monday.setDate(d.getDate() - (day === 0 ? 6 : day - 1));
     const y = monday.getFullYear();
     const mm = String(monday.getMonth() + 1).padStart(2, '0');
     const dd = String(monday.getDate()).padStart(2, '0');
-    return `${y}-M${mm}${dd}`;
+    return y + '-M' + mm + dd;
   }
 
   function _getWeekDates() {
-    const d = new Date();
-    const day = d.getDay();
+    const d = new Date(), day = d.getDay();
     const monday = new Date(d);
     monday.setDate(d.getDate() - (day === 0 ? 6 : day - 1));
     const dates = [];
     for (let i = 0; i < 7; i++) {
       const dt = new Date(monday);
       dt.setDate(monday.getDate() + i);
-      const y = dt.getFullYear();
-      const m = String(dt.getMonth() + 1).padStart(2, '0');
-      const dd = String(dt.getDate()).padStart(2, '0');
-      dates.push(`${y}-${m}-${dd}`);
+      dates.push(dt.getFullYear() + '-' + String(dt.getMonth()+1).padStart(2,'0') + '-' + String(dt.getDate()).padStart(2,'0'));
     }
     return dates;
   }
 
   function _getProg() {
     const wk = _weekKey();
-    const stored = Storage.get('rf_chal_week_app');
-    if (stored !== wk) {
+    if (Storage.get('rf_chal_week_app') !== wk) {
       Storage.set('rf_chal_week_app', wk);
       Storage.set('rf_chal_prog', {});
       return {};
@@ -1509,27 +1503,129 @@ const ChallengeTracker = (() => {
     Storage.set('rf_chal_prog', prog);
   }
 
+  // ── 이번 주 활성 챌린지 3개 계산 (seededShuffle 내부 구현) ───
+  function _getActiveThree() {
+    const seed = parseInt(_weekKey().replace(/\D/g, ''));
+    const arr = [...CONFIG.WEEKLY_CHALLENGES];
+    let s = seed;
+    for (let i = arr.length - 1; i > 0; i--) {
+      s = (s * 1664525 + 1013904223) & 0xffffffff;
+      const j = Math.abs(s) % (i + 1);
+      [arr[i], arr[j]] = [arr[j], arr[i]];
+    }
+    return arr.slice(0, 3);
+  }
+
+  // ── 보상 지급 여부 추적 ───────────────────────────────────────
+  function _rewardedKey() { return 'rf_chal_rewarded_' + _weekKey(); }
+  function _getRewarded() {
+    try { return new Set(JSON.parse(localStorage.getItem(_rewardedKey())) || []); }
+    catch { return new Set(); }
+  }
+  function _markRewarded(id) {
+    const s = _getRewarded(); s.add(id);
+    localStorage.setItem(_rewardedKey(), JSON.stringify([...s]));
+  }
+
+  // ── 패치 전 달성분: 보상 없이 처리 (최초 1회) ───────────────
+  function _initRewardsIfNeeded(prog) {
+    const initKey = 'rf_chal_reward_init_' + _weekKey();
+    if (localStorage.getItem(initKey)) return;
+    localStorage.setItem(initKey, '1');
+    const rewarded = _getRewarded();
+    _getActiveThree().forEach(c => {
+      if ((prog[c.id] || 0) >= c.goal) rewarded.add(c.id);
+    });
+    localStorage.setItem(_rewardedKey(), JSON.stringify([...rewarded]));
+  }
+
+  // ── 달성 감지 → 보상 + 축하 ─────────────────────────────────
+  function _checkAndReward(prog) {
+    const rewarded = _getRewarded();
+    _getActiveThree().forEach(c => {
+      if ((prog[c.id] || 0) >= c.goal && !rewarded.has(c.id)) {
+        _markRewarded(c.id);
+        if (typeof AppState !== 'undefined' && c.xpReward) AppState.addXP(c.xpReward);
+        _showChallengeComplete(c);
+      }
+    });
+  }
+
+  // ── 콘페티 ──────────────────────────────────────────────────
+  function _launchConfetti() {
+    if (!document.getElementById('confetti-css')) {
+      const st = document.createElement('style');
+      st.id = 'confetti-css';
+      st.textContent = '@keyframes cfFall{0%{transform:translateY(-10px) rotate(0deg);opacity:1}100%{transform:translateY(110vh) rotate(720deg);opacity:0}}';
+      document.head.appendChild(st);
+    }
+    const colors = ['#FF6B00','#FFD700','#FF4500','#34d399','#60a5fa','#f472b6','#a78bfa','#fb923c'];
+    const wrap = document.createElement('div');
+    wrap.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:10000;overflow:hidden;';
+    for (let i = 0; i < 100; i++) {
+      const p = document.createElement('div');
+      const size = Math.random() * 9 + 4;
+      const dur = (Math.random() * 1.5 + 1.2).toFixed(2);
+      const delay = (Math.random() * 0.9).toFixed(2);
+      p.style.cssText = 'position:absolute;width:' + size + 'px;height:' + size + 'px;background:' + colors[i % colors.length] + ';left:' + (Math.random()*100).toFixed(1) + '%;top:' + (Math.random()*-15).toFixed(1) + '%;border-radius:' + (Math.random()>0.5?'50%':'3px') + ';animation:cfFall ' + dur + 's ' + delay + 's ease-in forwards;';
+      wrap.appendChild(p);
+    }
+    document.body.appendChild(wrap);
+    setTimeout(function() { wrap.remove(); }, 3500);
+  }
+
+  // ── 달성 팝업 ────────────────────────────────────────────────
+  function _showChallengeComplete(c) {
+    _launchConfetti();
+    if (!document.getElementById('chal-pop-css')) {
+      const st = document.createElement('style');
+      st.id = 'chal-pop-css';
+      st.textContent = '@keyframes chalPop{0%{opacity:0;transform:translate(-50%,-50%) scale(0.4)}70%{transform:translate(-50%,-50%) scale(1.08)}100%{opacity:1;transform:translate(-50%,-50%) scale(1)}}';
+      document.head.appendChild(st);
+    }
+    const el = document.createElement('div');
+    el.style.cssText = 'position:fixed;top:50%;left:50%;z-index:10001;text-align:center;pointer-events:none;animation:chalPop 0.45s cubic-bezier(0.175,0.885,0.32,1.275) forwards;';
+    el.innerHTML = '<div style="background:#fff;border-radius:28px;box-shadow:0 24px 64px rgba(0,0,0,0.18);padding:32px 40px;border:2.5px solid #fbbf24;">'
+      + '<div style="font-size:44px;margin-bottom:10px;">' + c.icon + '</div>'
+      + '<div style="font-size:19px;font-weight:900;color:#1f2937;margin-bottom:4px;">챌린지 달성! 🎉</div>'
+      + '<div style="font-size:13px;color:#6b7280;margin-bottom:14px;">' + c.title + '</div>'
+      + '<div style="font-size:26px;font-weight:900;color:#f59e0b;letter-spacing:-0.5px;">+' + c.xpReward + ' XP</div>'
+      + '</div>';
+    document.body.appendChild(el);
+    setTimeout(function() { el.remove(); }, 3200);
+  }
+
+  // ── 진행 업데이트 ────────────────────────────────────────────
   function _inc(id, amount) {
     const prog = _getProg();
     prog[id] = (prog[id] || 0) + amount;
     _setProg(prog);
+    _checkAndReward(prog);
     if (typeof AppState !== 'undefined') AppState.renderDashboard();
+  }
+
+  function _set(id, value) {
+    const prog = _getProg();
+    prog[id] = value;
+    _setProg(prog);
   }
 
   function recalc() {
     const weekDates = _getWeekDates();
     let practiceDays = 0, totalMin = 0, waterDays = 0;
     let theoryDays = 0, warmupCount = 0, perfectDays = 0;
-    weekDates.forEach(dateStr => {
+
+    weekDates.forEach(function(dateStr) {
       const log = Storage.getLog(dateStr);
       if (!log) return;
       practiceDays++;
       totalMin += log.totalMin || 0;
       if ((log.totalMin || 0) >= 30) waterDays++;
-      if ((log.sessions || []).some(s => s.type === 'theory')) theoryDays++;
-      warmupCount += (log.sessions || []).filter(s => s.type === 'warmup').length;
+      if ((log.sessions || []).some(function(s) { return s.type === 'theory'; })) theoryDays++;
+      warmupCount += (log.sessions || []).filter(function(s) { return s.type === 'warmup'; }).length;
       if (log.allCompleted) perfectDays++;
     });
+
     const prog = _getProg();
     prog['practice_5days'] = practiceDays;
     prog['total_120min'] = totalMin;
@@ -1538,6 +1634,8 @@ const ChallengeTracker = (() => {
     prog['warmup_3'] = warmupCount;
     prog['perfect_set'] = perfectDays;
     _setProg(prog);
+    _initRewardsIfNeeded(prog);  // 기존 달성분 보상 없이 처리
+    _checkAndReward(prog);       // 신규 달성분 보상
     if (typeof AppState !== 'undefined') AppState.renderDashboard();
   }
 
@@ -1548,16 +1646,20 @@ const ChallengeTracker = (() => {
     const prog = _getProg();
     prog['rep_add_1'] = (prog['rep_add_1'] || 0) + 1;
     _setProg(prog);
+    _checkAndReward(prog);
     if (typeof AppState !== 'undefined') AppState.renderDashboard();
   }
 
   function addRepLevelUp(oldState, newState) {
     const order = ['learning', 'polishing', 'ready', 'mastered'];
-    if (order.indexOf(newState) > order.indexOf(oldState)) _inc('rep_level_up', 1);
+    if (order.indexOf(newState) > order.indexOf(oldState)) {
+      _inc('rep_level_up', 1);
+    }
   }
 
   return { recalc, addPomo, addSpeedBuilder, addRepSong, addRepLevelUp };
 })();
+
 
 
 // ═══════════════════════════════════════════════════════════════════════════
