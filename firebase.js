@@ -128,6 +128,13 @@ const FireDB = (() => {
       return snap.docs.map(d => d.data());
     } catch (e) { console.warn('[FireDB] loadAllLogs 실패:', e); return []; }
   }
+  async function deleteLog(dateStr) {
+    const ref = _userDoc(`logs/${dateStr}`);
+    if (!ref) return;
+    try {
+      await ref.delete();
+    } catch (e) { console.warn('[FireDB] deleteLog 실패:', e); }
+  }
 
   // ── 레퍼토리 ──────────────────────────────────────────────────────────────
   async function saveRepertoire(songs) {
@@ -224,7 +231,7 @@ const FireDB = (() => {
   return {
     onReady: onFirebaseReady,
     saveProfile, loadProfile,
-    saveLog, loadLog, loadAllLogs,
+    saveLog, loadLog, loadAllLogs, deleteLog,
     saveRepertoire, loadRepertoire,
     fetchPosts, savePost, updatePost, deletePost,
     subscribeBoard,
