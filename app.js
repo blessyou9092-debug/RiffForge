@@ -54,7 +54,7 @@ const AppState = (() => {
   let weeklyXp = [0, 0, 0, 0, 0, 0, 0];
   let weeklyMin = [0, 0, 0, 0, 0, 0, 0];
   let totalMin = 0;
-  let seasonXp = 0;
+  let seasonXp = 0, seasonWater = 0, seasonMin = 0; 
 
   async function loadAll() {
     xp = Storage.get(CONFIG.KEYS.XP, 0);
@@ -72,12 +72,17 @@ const AppState = (() => {
     const storedSeasonKey = Storage.get('rf_season_key', '');
     const prevSeasonKey = (storedSeasonKey && storedSeasonKey !== seasonKey) ? storedSeasonKey : null;
     if (storedSeasonKey !== seasonKey) {
-      seasonXp = 0;
+      seasonXp = 0; seasonWater = 0; seasonMin = 0;
       Storage.set('rf_season_xp', 0);
+      Storage.set('rf_season_water', 0);
+      Storage.set('rf_season_min', 0);
       Storage.set('rf_season_key', seasonKey);
     } else {
       seasonXp = Storage.get('rf_season_xp', 0);
+      seasonWater = Storage.get('rf_season_water', 0);
+      seasonMin = Storage.get('rf_season_min', 0);
     }
+
 
     if (typeof FireDB !== 'undefined') {
       FireDB.onReady(async () => {
@@ -92,9 +97,10 @@ const AppState = (() => {
           if (profile.weeklyMin) { weeklyMin = profile.weeklyMin; Storage.set(CONFIG.KEYS.WEEKLY_MIN, weeklyMin); }
           if (profile.lastPracticeDate) { lastPracticeDate = profile.lastPracticeDate; Storage.set(CONFIG.KEYS.LAST_PRACTICE_DATE, lastPracticeDate); }
           // seasonXp: 같은 시즌이고 클라우드 값이 더 크면 덮어씀
-          if (profile.seasonKey === seasonKey && (profile.seasonXp || 0) > seasonXp) {
-            seasonXp = profile.seasonXp;
-            Storage.set('rf_season_xp', seasonXp);
+          if (profile.seasonKey === seasonKey) {
+            if ((profile.seasonXp || 0) > seasonXp) { seasonXp = profile.seasonXp; Storage.set('rf_season_xp', seasonXp); }
+            if ((profile.seasonWater || 0) > seasonWater) { seasonWater = profile.seasonWater; Storage.set('rf_season_water', seasonWater); }
+            if ((profile.seasonMin || 0) > seasonMin) { seasonMin = profile.seasonMin; Storage.set('rf_season_min', seasonMin); }
           }
           if (profile.chalProg && profile.chalWeek) {
             const localWeek = Storage.get('rf_chal_week_app', '');
@@ -137,7 +143,7 @@ const AppState = (() => {
       FireDB.saveProfile({
         xp, water, streak, lastPracticeDate,
         weeklyXp, weeklyMin, totalMin,
-        seasonXp, seasonKey: getSeasonInfo().seasonKey,
+        seasonXp, seasonWater, seasonMin, seasonKey: getSeasonInfo().seasonKey,
         chalProg, chalWeek,
         username: FireDB.getUsername(),
         updatedAt: new Date().toISOString(),
@@ -153,7 +159,10 @@ const AppState = (() => {
     saveAll(); renderStats();
   }
   function addWater() {
-    water++; saveAll(); renderStats(); checkHarvest();
+    water++;
+    seasonWater++;
+    Storage.set('rf_season_water', seasonWater);
+    saveAll(); renderStats(); checkHarvest();
   }
     function _logDateStr(d) {
     return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
@@ -242,7 +251,9 @@ const AppState = (() => {
     if (!firstLogDate) return; // 이번 시즌 연습 없음 → 랭킹 미등록
     await FireDB.saveRanking(seasonKey, {
       username: myName, avatar: myAvatar,
-      seasonXp, firstLogDate,
+      seasonXp, seasonWater, seasonMin,
+      streak,           // 연속 출석은 누적값 그대로 사용
+      firstLogDate,
       updatedAt: new Date().toISOString(),
     }).catch(e => console.warn('[AppState] updateRanking 실패:', e));
   }
@@ -694,7 +705,14 @@ const AppState = (() => {
     getXp: () => xp, getWater: () => water, getStreak: () => streak,
     navigate,
     setTheme, editUsername, formatMin,
-    addTotalMin: (m) => { totalMin += m; weeklyMin[new Date().getDay()] = (weeklyMin[new Date().getDay()] || 0) + m; saveAll(); renderStats(); },
+    addTotalMin: (m) => {
+      totalMin += m;
+      seasonMin = Math.max(0, seasonMin + m);
+      Storage.set('rf_season_min', seasonMin);
+      weeklyMin[new Date().getDay()] = (weeklyMin[new Date().getDay()] || 0) + m;
+      saveAll(); renderStats();
+    },
+
     // Phase 7 추가
     getUserId, openProfileModal, closeProfileModal, saveProfile, _selectAvatar,
     getTodayMin: () => Storage.getLog(getTodayStr())?.totalMin || 0,
