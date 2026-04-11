@@ -60,6 +60,15 @@ const AppState = (() => {
           if (profile.totalMin > totalMin) { totalMin = profile.totalMin; Storage.set(CONFIG.KEYS.TOTAL_MIN, totalMin); }
           if (profile.weeklyMin) { weeklyMin = profile.weeklyMin; Storage.set(CONFIG.KEYS.WEEKLY_MIN, weeklyMin); }
           if (profile.lastPracticeDate) { lastPracticeDate = profile.lastPracticeDate; Storage.set(CONFIG.KEYS.LAST_PRACTICE_DATE, lastPracticeDate); }
+          if (profile.chalProg && profile.chalWeek) {
+            const localWeek = Storage.get('rf_chal_week_app', '');
+            if (!localWeek || profile.chalWeek === localWeek) {
+              Storage.set('rf_chal_week_app', profile.chalWeek);
+              Storage.set('rf_chal_prog', profile.chalProg);
+              localStorage.setItem('rf_chal_week', profile.chalWeek);
+              localStorage.setItem('rf_chal_prog', JSON.stringify(profile.chalProg));
+            }
+          }
           renderStats();
           renderDashboard();
           console.log('[AppState] 프로필 클라우드 동기화 완료');
@@ -85,9 +94,12 @@ const AppState = (() => {
 
     // Firestore 비동기 저장
     if (typeof FireDB !== 'undefined' && FireDB.isReady() && FireDB.getUsername()) {
+      const chalProg = Storage.get('rf_chal_prog', {});
+      const chalWeek = Storage.get('rf_chal_week_app', '');
       FireDB.saveProfile({
         xp, water, streak, lastPracticeDate,
         weeklyXp, weeklyMin, totalMin,
+        chalProg, chalWeek,
         username: FireDB.getUsername(),
         updatedAt: new Date().toISOString(),
       }).catch(e => console.warn('[AppState] saveProfile 실패:', e));
@@ -209,9 +221,15 @@ const AppState = (() => {
 
   function renderStats() {
     const tm = formatMin(totalMin);
-    [['stat-water', water], ['stat-streak', streak + '일'],
-    ['stat-water-hdr', water], ['stat-totalmin-hdr', tm], ['stat-streak-hdr', streak + '일']
-    ].forEach(([id, val]) => { const e = document.getElementById(id); if (e) e.textContent = val; });
+    const practicedToday = lastPracticeDate === getTodayStr();
+    [['stat-water', water], ['stat-water-hdr', water], ['stat-totalmin-hdr', tm]]
+      .forEach(([id, val]) => { const e = document.getElementById(id); if (e) e.textContent = val; });
+    ['stat-streak', 'stat-streak-hdr'].forEach(id => {
+      const e = document.getElementById(id);
+      if (!e) return;
+      e.textContent = streak + '일';
+      e.style.color = practicedToday ? '' : '#9ca3af';
+    });
   }
 
   function renderDashboard() {
@@ -221,13 +239,17 @@ const AppState = (() => {
     const todayMin = todayLog?.totalMin || 0;
     const stage = getTreeStage();
     [['dash-today-min', todayMin + '분'], ['dash-water-total', water + '회'],
-    ['dash-totalmin', formatMin(totalMin)], ['dash-streak', streak + '일'],
+    ['dash-totalmin', formatMin(totalMin)],
     ['dash-tree-emoji', stage.emoji], ['dash-tree-name', stage.name]
     ].forEach(([id, val]) => { const e = document.getElementById(id); if (e) e.textContent = val; });
+    const practicedToday = lastPracticeDate === getTodayStr();
+    const se = document.getElementById('dash-streak');
+    if (se) { se.textContent = streak + '일'; se.style.color = practicedToday ? '' : '#9ca3af'; }
     renderWeekChart();
     renderMonthHeatmap();
     renderWeeklyChallenges();
   }
+
   function getWeekKey() {
     const d = new Date();
     const day = d.getDay();
@@ -265,7 +287,6 @@ const AppState = (() => {
     const shuffled = seededShuffle(CONFIG.WEEKLY_CHALLENGES, seed);
     const three = shuffled.slice(0, 3);
     const doneCount = three.filter(c => (prog[c.id] || 0) >= c.goal).length;
-    const PAGE_LABEL = { builder: '연습일지', pomo: '포모도로', repertoire: '레퍼토리 트래커', studio: '메트로놈&백킹' };
     el.innerHTML = `
     <div class="bg-white rounded-2xl border border-amber-100 shadow-sm px-4 py-3 mb-4">
       <div class="flex items-center gap-2 mb-2">
@@ -277,11 +298,8 @@ const AppState = (() => {
       const cur = prog[c.id] || 0;
       const pct = Math.min(100, Math.round((cur / c.goal) * 100));
       const done = pct >= 100;
-      const dest = c.page || 'builder';
-      const destLabel = PAGE_LABEL[dest] || dest;
       return `<div
-          onclick="AppSidebar.setActive('${dest}')"
-          title="${c.desc} (${cur}/${c.goal} ${c.unit}) → ${destLabel}으로 이동"
+          onclick="AppState.showChallengePopup('${c.id}')"
           class="group flex items-center gap-2 rounded-xl px-2 py-1 cursor-pointer hover:bg-amber-50 transition-colors">
           <span class="text-base w-5 shrink-0">${c.icon}</span>
           <span class="text-xs font-semibold text-gray-700 w-28 shrink-0 truncate group-hover:text-amber-700">${c.title}</span>
@@ -289,12 +307,57 @@ const AppState = (() => {
             <div class="${done ? 'bg-green-400' : 'bg-amber-400'} h-1.5 rounded-full transition-all" style="width:${pct}%"></div>
           </div>
           <span class="text-[11px] font-black ${done ? 'text-green-600' : 'text-amber-500'} w-10 text-right shrink-0">${done ? '✅' : pct + '%'}</span>
-          <span class="text-[10px] text-gray-300 group-hover:text-amber-400 shrink-0">→</span>
+          <span class="text-[10px] text-gray-300 group-hover:text-amber-400 shrink-0">ⓘ</span>
         </div>`;
     }).join('')}
       </div>
     </div>`;
   }
+
+  function showChallengePopup(chalId) {
+    const existing = document.getElementById('chal-popup');
+    if (existing) { existing.remove(); return; }
+    const wk = getWeekKey();
+    const seed = parseInt(wk.replace(/\D/g, ''));
+    const three = seededShuffle(CONFIG.WEEKLY_CHALLENGES, seed).slice(0, 3);
+    const c = three.find(ch => ch.id === chalId);
+    if (!c) return;
+    let prog = {};
+    try { prog = JSON.parse(localStorage.getItem('rf_chal_prog')) || {}; } catch {}
+    const cur = prog[c.id] || 0;
+    const pct = Math.min(100, Math.round((cur / c.goal) * 100));
+    const done = pct >= 100;
+    const PAGE_LABEL = { builder: '연습일지', pomo: '포모도로', repertoire: '레퍼토리 트래커', studio: '메트로놈&백킹' };
+    const destLabel = PAGE_LABEL[c.page] || c.page;
+    const popup = document.createElement('div');
+    popup.id = 'chal-popup';
+    popup.className = 'fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4';
+    popup.innerHTML = `
+      <div class="absolute inset-0 bg-black/40" onclick="document.getElementById('chal-popup').remove()"></div>
+      <div class="relative bg-white rounded-2xl shadow-xl p-5 max-w-sm w-full z-10">
+        <div class="flex items-center gap-3 mb-3">
+          <span class="text-3xl">${c.icon}</span>
+          <div>
+            <p class="font-black text-gray-800 text-base leading-tight">${c.title}</p>
+            <p class="text-xs font-bold ${done ? 'text-green-500' : 'text-amber-500'} mt-0.5">${done ? '✅ 완료!' : `진행 ${cur}/${c.goal} ${c.unit}`}</p>
+          </div>
+        </div>
+        <p class="text-sm text-gray-600 mb-3">${c.desc}</p>
+        <div class="w-full bg-gray-100 rounded-full h-2 mb-4">
+          <div class="${done ? 'bg-green-400' : 'bg-amber-400'} h-2 rounded-full transition-all" style="width:${pct}%"></div>
+        </div>
+        <div class="flex gap-2">
+          <button onclick="document.getElementById('chal-popup').remove(); AppSidebar.setActive('${c.page}')"
+            class="flex-1 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-white font-bold text-sm transition-colors">
+            → ${destLabel}으로 이동
+          </button>
+          <button onclick="document.getElementById('chal-popup').remove()"
+            class="px-4 py-2.5 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-600 font-bold text-sm">닫기</button>
+        </div>
+      </div>`;
+    document.body.appendChild(popup);
+  }
+
 
   function renderWeekChart() {
     const c = document.getElementById('week-chart');
@@ -504,6 +567,7 @@ const AppState = (() => {
   return {
     loadAll, saveAll, addXP, addWater, updateStreak, getTreeStage,
     renderStats, renderDashboard, renderWeeklyChallenges, renderTreeGarden,
+    showChallengePopup,
     getXp: () => xp, getWater: () => water, getStreak: () => streak,
     navigate,
     setTheme, editUsername, formatMin,
