@@ -3215,43 +3215,38 @@ function showGuidePopup() {
   const popup = document.createElement('div');
   popup.id = 'guide-popup';
   popup.className = 'fixed inset-0 z-50 flex items-center justify-center p-4';
-  popup.innerHTML = `
-    <div class="absolute inset-0 bg-black/40" onclick="document.getElementById('guide-popup').remove()"></div>
-    <div class="relative bg-white rounded-2xl shadow-xl p-6 max-w-sm w-full z-10 max-h-[85vh] overflow-y-auto">
-      <div class="flex items-center justify-between mb-4">
-        <h3 class="font-black text-gray-800 text-base">🎸 시작 가이드</h3>
-        <button onclick="document.getElementById('guide-popup').remove()" class="text-gray-300 hover:text-gray-500 text-xl font-bold">✕</button>
-      </div>
-      <div class="space-y-4 text-sm text-gray-600">
-        <div>
-          <p class="font-black text-gray-800 mb-0.5">① 이름 등록</p>
-          <p>대시보드 상단 인사말 클릭 → 이름 입력. 내 연습 기록이 서버에 저장됩니다.</p>
-        </div>
-        <div>
-          <p class="font-black text-gray-800 mb-0.5">② 연습일지 쓰기 ← 핵심!</p>
-          <p><b>연습일지</b> → 세션 추가(워밍업/이론/실전) → 분 입력 → 저장. 저장할 때마다 XP와 물주기가 쌓입니다. </p>
-        </div>
-        <div>
-          <p class="font-black text-gray-800 mb-0.5">③ 연습곡 관리</p>
-          <p><b>연습곡 관리</b> → 곡 추가 → 슬라이더로 완성도 조절.<p> 1) 연습곡을 추가해서 "연습하기"버튼으로 연습 일지와 연계하고,<p> 2) 포모도로에서 연습일지를 연동해 백킹트랙과 함께 연습해보세요. </p>
-        </div>
-        <div>
-          <p class="font-black text-gray-800 mb-0.5">④ 나무 키우기</p>
-          <p>30분 이상 연습하면 🌱 나무에 물이 줍니다. 연속 출석은 하루 빠지면 0 리셋!</p>
-        </div>
-        <div>
-          <p class="font-black text-gray-800 mb-0.5">⑤ 스튜디오</p>
-          <p><b>메트로놈 & 백킹</b>에서 박자 + 코드 반주를 함께 틀 수 있습니다. </p>
-        </div>
-        <div>
-          <p class="font-black text-gray-800 mb-0.5">⑥ 주간 챌린지</p>
-          <p>대시보드에 매주 챌린지 3개. 달성하면 즉시 XP 보상 🎉</p>
-        </div>
-        <div class="bg-amber-50 rounded-xl px-3 py-2 text-xs text-amber-700">
-          💡 <b>달력</b>에서 지난 연습 확인·수정·삭제<br>
-          💡 <b>성장 스토리</b>에서 나의 전체 여정 확인
-        </div>
-      </div>
-    </div>`;
+
+  const inner = document.createElement('div');
+  inner.className = 'absolute inset-0 bg-black/40';
+  inner.onclick = function() { popup.remove(); };
+  popup.appendChild(inner);
+
+  const box = document.createElement('div');
+  box.className = 'relative bg-white rounded-2xl shadow-xl p-6 max-w-sm w-full z-10 max-h-[85vh] overflow-y-auto';
+  box.innerHTML =
+    '<div class="flex items-center justify-between mb-4">' +
+      '<h3 class="font-black text-gray-800 text-base">🎸 시작 가이드</h3>' +
+      '<button onclick="document.getElementById(\'guide-popup\').remove()" class="text-gray-300 hover:text-gray-500 text-xl font-bold">✕</button>' +
+    '</div>' +
+    '<div class="space-y-4 text-sm text-gray-600">' +
+      '<div><p class="font-black text-gray-800 mb-0.5">① 이름 등록</p>' +
+      '<p>대시보드 상단 인사말 클릭 → 이름 입력. 내 기록이 서버에 저장됩니다.</p></div>' +
+      '<div><p class="font-black text-gray-800 mb-0.5">② 연습일지 쓰기 ← 핵심!</p>' +
+      '<p><b>연습일지</b> → 세션 추가(워밍업/이론/실전) → 분 입력 → 저장. 저장마다 XP와 물주기가 쌓입니다.</p></div>' +
+      '<div><p class="font-black text-gray-800 mb-0.5">③ 연습곡 관리</p>' +
+      '<p><b>연습곡 관리</b> → 곡 추가 → 슬라이더로 완성도 조절. Learning → Mastered 단계로 성장을 추적합니다.</p></div>' +
+      '<div><p class="font-black text-gray-800 mb-0.5">④ 나무 키우기</p>' +
+      '<p>30분 이상 연습하면 나무에 물이 줍니다. 연속 출석은 하루 빠지면 0 리셋!</p></div>' +
+      '<div><p class="font-black text-gray-800 mb-0.5">⑤ 스튜디오</p>' +
+      '<p><b>메트로놈 & 백킹</b>에서 박자 + 코드 반주를 함께 틀 수 있습니다.</p></div>' +
+      '<div><p class="font-black text-gray-800 mb-0.5">⑥ 주간 챌린지</p>' +
+      '<p>대시보드에 매주 챌린지 3개. 달성하면 즉시 XP 보상!</p></div>' +
+      '<div class="bg-amber-50 rounded-xl px-3 py-2 text-xs text-amber-700">' +
+        '💡 <b>달력</b>에서 지난 연습 확인·수정·삭제<br>' +
+        '💡 <b>성장 스토리</b>에서 나의 전체 여정 확인' +
+      '</div>' +
+    '</div>';
+
+  popup.appendChild(box);
   document.body.appendChild(popup);
 }
