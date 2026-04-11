@@ -178,6 +178,21 @@ const FireDB = (() => {
       await _boardCol().doc(postId).delete();
     } catch (e) { console.warn('[FireDB] deletePost 실패:', e); }
   }
+  // ── 크루 시즌 랭킹 ──────────────────────────────────────────────────────────
+  async function saveRanking(seasonKey, data) {
+    const name = _username();
+    if (!name) return;
+    try {
+      await _db.doc(`rankings/${seasonKey}/users/${name}`).set(data, { merge: true });
+    } catch (e) { console.warn('[FireDB] saveRanking 실패:', e); }
+  }
+
+  async function loadSeasonRankings(seasonKey) {
+    try {
+      const snap = await _db.collection(`rankings/${seasonKey}/users`).get();
+      return snap.docs.map(d => ({ username: d.id, ...d.data() }));
+    } catch (e) { console.warn('[FireDB] loadSeasonRankings 실패:', e); return []; }
+  }
 
   // 게시판 실시간 구독 (30초 폴링 대체)
   function subscribeBoard(callback) {
@@ -197,6 +212,7 @@ const FireDB = (() => {
     saveRepertoire, loadRepertoire,
     fetchPosts, savePost, updatePost, deletePost,
     subscribeBoard,
+    saveRanking, loadSeasonRankings,
     isReady: () => _fbReady,
     getUsername: _username,
   };
