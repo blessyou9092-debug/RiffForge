@@ -398,16 +398,28 @@ const AppState = (() => {
   }
 
   // 인사말 렌더링
-  function renderGreeting() {
-    const name = Storage.get(CONFIG.KEYS.USERNAME, '') || '기타리스트';
-    const h = new Date().getHours();
-    const greeting = h < 11 ? '좋은 아침입니다' : h < 18 ? '좋은 오후입니다' : '좋은 저녁입니다';
-    const msg = `${name}님, ${greeting}! 🎸`;
-    const el = document.getElementById('dash-greeting');
-    if (el) el.textContent = msg;
-    const hdr = document.getElementById('hdr-greeting');
-    if (hdr) hdr.textContent = name + '님';
+function renderGreeting() {
+  const name = Storage.get(CONFIG.KEYS.USERNAME, '');
+  const el = document.getElementById('dash-greeting');
+  const hdr = document.getElementById('hdr-greeting');
+
+  if (!name) {
+    // 이름 미입력: 클릭 유도 문구
+    if (el) {
+      el.innerHTML = `<span
+        onclick="AppState.editUsername()"
+        style="cursor:pointer;text-decoration:underline dotted;text-underline-offset:4px;opacity:0.75;"
+        title="클릭해서 이름 입력">기타리스트님, 이름을 입력해서 연습 일지를 시작해보세요 👆</span>`;
+    }
+    if (hdr) hdr.textContent = '기타리스트님';
+    return;
   }
+
+  const h = new Date().getHours();
+  const greeting = h < 11 ? '좋은 아침입니다' : h < 18 ? '좋은 오후입니다' : '좋은 저녁입니다';
+  if (el) el.textContent = `${name}님, ${greeting}! 🎸`;
+  if (hdr) hdr.textContent = name + '님';
+}
 
   function renderStats() {
     const tm = formatMin(totalMin);
@@ -1534,9 +1546,10 @@ const StudioUI = (() => {
   }
 
   // ── 메트로놈 & 백킹 동시 재생 ────────────────────────────────────
-  function syncPlay() {
-    const metroOn = document.getElementById('toggle-metro')?.checked ?? true;
-    const backingOn = document.getElementById('toggle-backing')?.checked ?? true;
+  async function syncPlay() {
+  await AudioEngine.ensureRunning(); // iOS: 탭 제스처 안에서 AudioContext 활성화
+  const metroOn = document.getElementById('toggle-metro')?.checked ?? true;
+  const backingOn = document.getElementById('toggle-backing')?.checked ?? true;
 
     const isAnyPlaying = Metronome.getIsPlaying() || BackingEngine.getIsPlaying();
     if (isAnyPlaying) {
