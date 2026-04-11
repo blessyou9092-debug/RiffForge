@@ -891,10 +891,17 @@ const CalendarView = (() => {
             <p class="text-xs text-indigo-700 leading-snug whitespace-pre-wrap">${log.note}</p>
           </div>` : ''}
       ` : `<p class="text-xs text-gray-400 mb-3">기록 없음</p>`}
-      ${isPast ? `<button onclick="CalendarView.goToBuilder()"
-        class="w-full py-2 bg-amber-500 text-white text-xs font-bold rounded-xl hover:bg-amber-600 transition-colors">
-        ${log ? '✏️ 기록 수정' : '➕ 기록 추가'}
-      </button>` : ''}`;
+      ${isPast ? `
+        <div class="flex gap-2">
+          <button onclick="CalendarView.goToBuilder()"
+            class="flex-1 py-2 bg-amber-500 text-white text-xs font-bold rounded-xl hover:bg-amber-600 transition-colors">
+            ${log ? '✏️ 수정' : '➕ 기록 추가'}
+          </button>
+          ${log ? `<button onclick="CalendarView.deleteLog('${dateStr}')"
+            class="py-2 px-3 bg-red-100 text-red-500 text-xs font-bold rounded-xl hover:bg-red-200 transition-colors">
+            🗑️ 삭제
+          </button>` : ''}
+        </div>` : ''}`;
   }
 
   function goToBuilder() {
@@ -903,6 +910,28 @@ const CalendarView = (() => {
     setTimeout(() => PracticeBuilder.loadDate(selectedDate), 300);
     const panel = document.getElementById('calendar-day-detail');
     if (panel) panel.classList.add('hidden');
+  }
+  function deleteLog(dateStr) {
+    const log = Storage.getLog(dateStr);
+    if (!log) return;
+    if (!confirm(`${dateStr} 연습 기록을 삭제하시겠습니까?\n\n⚠️ XP·물주기는 유지되며 기록만 삭제됩니다.`)) return;
+
+    // localStorage + Firestore 삭제
+    Storage.deleteLog(dateStr);
+
+    // 시즌 첫 기록 캐시 초기화 (랭킹 재계산 오류 방지)
+    if (typeof getSeasonInfo === 'function') {
+      const { seasonKey } = getSeasonInfo();
+      localStorage.removeItem(`rf_s_first_${seasonKey}`);
+    }
+
+    // 패널 닫기 + 달력 재렌더
+    selectedDate = null;
+    const panel = document.getElementById('calendar-day-detail');
+    if (panel) panel.classList.add('hidden');
+    render();
+
+    showToast('연습 기록이 삭제되었습니다.', 'info');
   }
 
   function prevMonth() {
@@ -915,7 +944,7 @@ const CalendarView = (() => {
   }
   function setIcon() { }
 
-  return { render, selectDate, setIcon, goToBuilder, prevMonth, nextMonth };
+  return { render, selectDate, setIcon, goToBuilder, prevMonth, nextMonth, deleteLog };
 })();
 
 // ═══════════════════════════════════════════════════════════════════════════
