@@ -283,6 +283,7 @@ const PracticeBuilder = (() => {
     // 스트릭 업데이트
     AppState.updateStreak(editingDate);
     AppState.saveAll();
+    AppState.updateRanking().catch(e => console.warn('[Ranking] 업데이트 실패:', e));
     if (typeof ChallengeTracker !== 'undefined') ChallengeTracker.recalc();
     AppState.renderDashboard();
     CalendarView.render();
@@ -1202,153 +1203,167 @@ const ChallengeTracker = (() => {
 
 
 // ═══════════════════════════════════════════════════════════════════════════
-// CrewRanking: 크루 랭킹 — 세로형 카드 + 팝업 순위
+// CrewRanking: 실제 Firestore 기반 시즌 랭킹
 // ═══════════════════════════════════════════════════════════════════════════
 const CrewRanking = (() => {
-  const CATEGORIES = [
-    { id: 'monthlyXp', label: '월간 XP', icon: '⚡', unit: 'XP', key: m => m.monthlyXp, color: 'amber' },
-    { id: 'waterCount', label: '물주기', icon: '💧', unit: '회', key: m => m.waterCount, color: 'blue' },
-    { id: 'streak', label: '연속 연습', icon: '🔥', unit: '일', key: m => m.streak, color: 'orange' },
-    { id: 'masteredCount', label: '곡 마스터', icon: '🏆', unit: '곡', key: m => m.masteredCount, color: 'green' },
-    { id: 'challengeDone', label: '챌린지 달성', icon: '🎯', unit: '개', key: m => m.challengeDone, color: 'purple' },
-  ];
-  const COLOR = {
-    amber: { bg: 'bg-amber-50', border: 'border-amber-200', icon: 'bg-amber-100 text-amber-600', bar: 'bg-amber-400', badge: 'text-amber-600' },
-    blue: { bg: 'bg-blue-50', border: 'border-blue-200', icon: 'bg-blue-100 text-blue-600', bar: 'bg-blue-400', badge: 'text-blue-600' },
-    orange: { bg: 'bg-orange-50', border: 'border-orange-200', icon: 'bg-orange-100 text-orange-600', bar: 'bg-orange-400', badge: 'text-orange-600' },
-    green: { bg: 'bg-green-50', border: 'border-green-200', icon: 'bg-green-100 text-green-600', bar: 'bg-green-400', badge: 'text-green-600' },
-    purple: { bg: 'bg-purple-50', border: 'border-purple-200', icon: 'bg-purple-100 text-purple-600', bar: 'bg-purple-400', badge: 'text-purple-600' },
-  };
-  const MEDALS = ['🥇', '🥈', '🥉', '4️⃣', '5️⃣', '6️⃣'];
+  const MEDALS = ['🥇', '🥈', '🥉'];
 
-  function _getMembers() {
-    const xp = Storage.get(CONFIG.KEYS.XP, 0);
-    const water = Storage.get(CONFIG.KEYS.WATER, 0);
-    const streak = Storage.get(CONFIG.KEYS.STREAK, 0);
-    let masteredCount = 0;
-    try { masteredCount = (JSON.parse(localStorage.getItem('rf_repertoire')) || []).filter(s => s.state === 'mastered').length; } catch { }
-    const me = { id: 'me', name: '나', avatar: '😎', monthlyXp: xp, waterCount: water, streak, masteredCount, challengeDone: 1 };
-    return [me, ...CONFIG.MOCK_CREW];
+  async function _fetchRanked() {
+    if (typeof FireDB === 'undefined' || !FireDB.isReady()) return [];
+    const { seasonKey } = getSeasonInfo();
+    const all = await FireDB.loadSeasonRankings(seasonKey);
+    return all
+      .filter(r => r.firstLogDate)
+      .sort((a, b) => (b.seasonXp || 0) - (a.seasonXp || 0));
   }
 
-  function _rank(cat) {
-    return _getMembers().map(m => ({ ...m, val: cat.key(m) })).sort((a, b) => b.val - a.val);
-  }
-
-  function openModal(catId) {
-    const cat = CATEGORIES.find(c => c.id === catId);
-    if (!cat) return;
-    const ranked = _rank(cat);
-    const c = COLOR[cat.color];
-    const max = ranked[0]?.val || 1;
+  async function openModal() {
     const existing = document.getElementById('ranking-modal');
     if (existing) existing.remove();
+    const { daysLeft } = getSeasonInfo();
+    const dLabel = daysLeft <= 0 ? 'D-DAY' : `D-${daysLeft}`;
+
     const modal = document.createElement('div');
     modal.id = 'ranking-modal';
     modal.className = 'fixed inset-0 z-50 flex items-center justify-center p-4';
     modal.style.background = 'rgba(0,0,0,0.45)';
     modal.innerHTML = `
       <div class="bg-white rounded-3xl shadow-2xl w-full max-w-sm overflow-hidden">
-        <div class="flex items-center gap-3 px-5 py-4 ${c.bg} border-b ${c.border}">
-          <span class="text-2xl">${cat.icon}</span>
+        <div class="flex items-center gap-3 px-5 py-4 bg-amber-50 border-b border-amber-200">
+          <span class="text-2xl">⚡</span>
           <div>
-            <p class="font-black text-gray-800 text-base">${cat.label} 랭킹</p>
-            <p class="text-xs text-gray-400">크루 전체 순위</p>
+            <p class="font-black text-gray-800 text-base">시즌 XP 랭킹</p>
+            <p class="text-xs text-gray-400">상위 3위 + 내 순위 · ${dLabel}</p>
           </div>
           <button onclick="document.getElementById('ranking-modal').remove()"
-            class="ml-auto w-8 h-8 rounded-xl bg-white/70 hover:bg-white flex items-center justify-center text-gray-500 font-bold text-lg transition-colors">✕</button>
+            class="ml-auto w-8 h-8 rounded-xl bg-white/70 hover:bg-white flex items-center justify-center text-gray-500 font-bold text-lg">✕</button>
         </div>
-        <div class="p-4 space-y-2 max-h-96 overflow-y-auto">
-          ${ranked.map((m, i) => {
-      const pct = Math.round((m.val / max) * 100);
-      const isMe = m.id === 'me';
-      return `<div class="flex items-center gap-3 p-2.5 rounded-xl ${isMe ? c.bg + ' border ' + c.border : 'bg-gray-50'}">
-              <span class="text-lg w-6 text-center shrink-0">${MEDALS[i] || (i + 1) + '위'}</span>
-              <span class="text-xl shrink-0">${m.avatar}</span>
-              <div class="flex-1 min-w-0">
-                <p class="text-sm font-bold text-gray-800">${m.name}${isMe ? ' (나)' : ''}</p>
-                <div class="w-full bg-gray-200 rounded-full h-1 mt-1">
-                  <div class="${c.bar} h-1 rounded-full" style="width:${pct}%"></div>
-                </div>
-              </div>
-              <span class="text-sm font-black text-gray-700 shrink-0">${m.val.toLocaleString()} ${cat.unit}</span>
-            </div>`;
-    }).join('')}
+        <div id="ranking-modal-body" class="p-4">
+          <p class="text-center text-gray-400 py-8 text-sm">불러오는 중...</p>
         </div>
       </div>`;
     modal.addEventListener('click', e => { if (e.target === modal) modal.remove(); });
     document.body.appendChild(modal);
+
+    try {
+      const ranked = await _fetchRanked();
+      const myName = Storage.get(CONFIG.KEYS.USERNAME, '');
+      const myIdx = myName ? ranked.findIndex(r => r.username === myName) : -1;
+      const body = document.getElementById('ranking-modal-body');
+      if (!body) return;
+
+      if (ranked.length === 0) {
+        body.innerHTML = `<p class="text-center text-gray-400 py-8 text-sm">아직 참가자가 없어요 🎸<br><span class="text-xs">연습 일지를 저장하면 랭킹에 참가돼요</span></p>`;
+        return;
+      }
+
+      // 표시할 인덱스: 0,1,2 + 내 순위(3 이상일 때)
+      const showSet = new Set([0, 1, 2]);
+      if (myIdx >= 3) showSet.add(myIdx);
+
+      let rows = '';
+      ranked.forEach((r, i) => {
+        if (!showSet.has(i)) return;
+        const isMe = r.username === myName;
+        // 내 순위와 3위 사이 구분선
+        if (i === myIdx && myIdx > 3) {
+          rows += `<div class="flex items-center gap-2 my-1.5">
+            <div class="flex-1 border-t border-dashed border-gray-200"></div>
+            <span class="text-xs text-gray-300">···</span>
+            <div class="flex-1 border-t border-dashed border-gray-200"></div>
+          </div>`;
+        }
+        rows += `<div class="flex items-center gap-3 p-2.5 rounded-xl ${isMe ? 'bg-amber-50 border border-amber-200' : 'bg-gray-50'}">
+          <span class="text-lg w-7 text-center shrink-0">${i < 3 ? MEDALS[i] : (i + 1) + '위'}</span>
+          <span class="text-xl shrink-0">${r.avatar || '🎸'}</span>
+          <div class="flex-1 min-w-0">
+            <p class="text-sm font-bold text-gray-800 truncate">${r.username}${isMe ? ' <span class="text-amber-500">(나)</span>' : ''}</p>
+          </div>
+          <span class="text-sm font-black text-amber-600 shrink-0">${(r.seasonXp || 0).toLocaleString()} XP</span>
+        </div>`;
+      });
+
+      body.innerHTML = `<div class="space-y-1.5">${rows}</div>`;
+      if (myName && myIdx < 0) {
+        body.innerHTML += `<p class="text-xs text-center text-gray-400 mt-3">이번 시즌 아직 연습 기록이 없어요</p>`;
+      }
+    } catch {
+      const body = document.getElementById('ranking-modal-body');
+      if (body) body.innerHTML = `<p class="text-center text-red-400 py-8 text-sm">불러오기 실패. 네트워크를 확인해주세요.</p>`;
+    }
   }
 
-  // 카테고리별 그라데이션 (도파민 버전)
-  const GRAD = {
-    amber: 'from-amber-400 to-orange-500',
-    blue: 'from-blue-400 to-cyan-500',
-    orange: 'from-orange-400 to-red-500',
-    green: 'from-green-400 to-emerald-500',
-    purple: 'from-purple-400 to-violet-600',
-  };
-  const GLOW = {
-    amber: 'shadow-amber-200',
-    blue: 'shadow-blue-200',
-    orange: 'shadow-orange-200',
-    green: 'shadow-green-200',
-    purple: 'shadow-purple-200',
-  };
-
-  function render() {
+  async function render() {
     const board = document.getElementById('ranking-board');
     if (!board) return;
-    board.innerHTML = CATEGORIES.map(cat => {
-      const ranked = _rank(cat);
-      const top = ranked[0];
-      const me = ranked.find(m => m.id === 'me');
-      const myRank = ranked.indexOf(me) + 1;
-      const isTopMe = top.id === 'me';
-      const grad = GRAD[cat.color];
-      const glow = GLOW[cat.color];
-      const c = COLOR[cat.color];
-      return `
-      <div onclick="CrewRanking.openModal('${cat.id}')"
+    const { daysLeft } = getSeasonInfo();
+    const dLabel = daysLeft <= 0 ? 'D-DAY' : `D-${daysLeft}`;
+    const myName = Storage.get(CONFIG.KEYS.USERNAME, '');
+    const mySeasonXp = Storage.get('rf_season_xp', 0);
+
+    board.innerHTML = `<div class="text-center text-gray-300 py-6 text-sm">불러오는 중...</div>`;
+
+    let ranked = [];
+    try {
+      ranked = await _fetchRanked();
+    } catch { /* 오프라인 처리 */ }
+
+    const top = ranked[0] || null;
+    const myIdx = myName ? ranked.findIndex(r => r.username === myName) : -1;
+    const myRank = myIdx >= 0 ? myIdx + 1 : null;
+
+    board.innerHTML = `
+      <div onclick="CrewRanking.openModal()"
         class="relative overflow-hidden rounded-3xl cursor-pointer
-          bg-gradient-to-br ${grad} ${glow}
-          shadow-lg hover:shadow-xl hover:-translate-y-1
-          transition-all duration-200 flex flex-col"
-        style="min-height:200px">
-        <!-- 배경 장식 원 -->
-        <div class="absolute -top-6 -right-6 w-24 h-24 rounded-full bg-white/10 pointer-events-none"></div>
+          bg-gradient-to-br from-amber-400 to-orange-500
+          shadow-lg hover:shadow-xl hover:-translate-y-1 transition-all duration-200 flex flex-col"
+        style="min-height:210px">
+        <!-- 배경 장식 -->
+        <div class="absolute -top-6 -right-6 w-28 h-28 rounded-full bg-white/10 pointer-events-none"></div>
         <div class="absolute -bottom-4 -left-4 w-16 h-16 rounded-full bg-white/10 pointer-events-none"></div>
 
         <!-- 헤더 -->
         <div class="flex items-center justify-between px-4 pt-4 pb-2">
           <div class="flex items-center gap-2">
-            <span class="text-2xl drop-shadow">${cat.icon}</span>
-            <p class="text-xs font-black text-white/90 tracking-wide uppercase">${cat.label}</p>
+            <span class="text-2xl drop-shadow">⚡</span>
+            <p class="text-xs font-black text-white/90 tracking-wide">시즌 XP 랭킹</p>
           </div>
-          <span class="text-[10px] text-white/60 font-bold">탭하여 전체보기 →</span>
+          <div class="flex items-center gap-2">
+            <span class="text-[11px] font-black bg-white/20 text-white rounded-full px-2 py-0.5">${dLabel}</span>
+            <span class="text-[10px] text-white/60 font-bold">탭하여 전체보기 →</span>
+          </div>
         </div>
 
         <!-- 1위 섹션 -->
-        <div class="flex-1 flex flex-col items-center justify-center px-4 py-3 gap-1">
-          <div class="text-3xl drop-shadow-md">${top.avatar}</div>
+        ${top ? `
+        <div class="flex-1 flex flex-col items-center justify-center px-4 py-2 gap-1">
+          <div class="text-3xl drop-shadow-md">${top.avatar || '🎸'}</div>
           <div class="flex items-center gap-1">
             <span class="text-base">🥇</span>
-            <p class="text-sm font-black text-white drop-shadow">${top.name}${isTopMe ? ' (나)' : ''}</p>
+            <p class="text-sm font-black text-white drop-shadow truncate max-w-[120px]">${top.username}${top.username === myName ? ' (나)' : ''}</p>
           </div>
-          <p class="text-xl font-black text-white drop-shadow-md">${top.val.toLocaleString()}<span class="text-sm font-bold ml-0.5 opacity-80">${cat.unit}</span></p>
+          <p class="text-xl font-black text-white drop-shadow-md">${(top.seasonXp || 0).toLocaleString()}<span class="text-sm font-bold ml-0.5 opacity-80">XP</span></p>
         </div>
+        ` : `
+        <div class="flex-1 flex flex-col items-center justify-center px-4 py-2">
+          <p class="text-white/80 text-sm font-bold">아직 참가자가 없어요</p>
+          <p class="text-white/60 text-xs mt-1">연습 일지를 저장하면 자동 등록 🎸</p>
+        </div>
+        `}
 
         <!-- 내 순위 배지 -->
         <div class="mx-3 mb-4 px-3 py-2 rounded-2xl bg-white/20 backdrop-blur-sm flex items-center justify-between">
           <span class="text-[11px] text-white/80 font-bold">내 순위</span>
-          <span class="text-xs font-black text-white">${myRank === 1 ? '👑 1위!' : myRank + '위'} · ${me.val.toLocaleString()} ${cat.unit}</span>
+          <span class="text-xs font-black text-white">
+            ${myRank ? (myRank === 1 ? '👑 1위!' : myRank + '위') : '미참가'} · ${mySeasonXp.toLocaleString()} XP
+          </span>
         </div>
       </div>`;
-    }).join('');
   }
 
   return { render, openModal };
 })();
+
 // ═══════════════════════════════════════════════════════════════════════════
 // ProgressStory: 성장 스토리 리포트
 // ═══════════════════════════════════════════════════════════════════════════
