@@ -13,9 +13,13 @@ const AudioEngine = (() => {
     if (ctx.state === 'suspended') ctx.resume();
     return ctx;
   }
-  return { getCtx };
+  // iOS Safari: 사용자 제스처 안에서 resume()을 await해야 소리가 남
+  async function ensureRunning() {
+    if (!ctx) ctx = new (window.AudioContext || window.webkitAudioContext)();
+    if (ctx.state === 'suspended') await ctx.resume();
+  }
+  return { getCtx, ensureRunning };
 })();
-
 
 // ═══════════════════════════════════════════════════════════════════════════
 // Metronome: 볼륨·세분화·박자패턴·음색 지원 정밀 메트로놈
