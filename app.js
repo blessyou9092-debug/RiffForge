@@ -27,6 +27,24 @@ function getTodayStr() {
   const day = String(d.getDate()).padStart(2, '0');
   return `${y}-${m}-${day}`;
 }
+function getSeasonInfo() {
+  const [ay, am, ad] = CONFIG.SEASON_ANCHOR.split('-').map(Number);
+  const anchor = new Date(ay, am - 1, ad);
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const daysSince = Math.floor((today - anchor) / 86400000);
+  const idx = Math.max(0, Math.floor(daysSince / 14));
+  const start = new Date(anchor);
+  start.setDate(anchor.getDate() + idx * 14);
+  const end = new Date(start);
+  end.setDate(start.getDate() + 13); // 해당 시즌 마지막 날 (일요일)
+  const y = start.getFullYear();
+  const mm = String(start.getMonth() + 1).padStart(2, '0');
+  const dd = String(start.getDate()).padStart(2, '0');
+  const seasonKey = `${y}-S${mm}${dd}`;
+  const daysLeft = Math.floor((end - today) / 86400000);
+  return { seasonKey, start, end, daysLeft };
+}
 
 // ═══════════════════════════════════════════════════════════════════════════
 // AppState: 전역 상태 관리
@@ -36,9 +54,9 @@ const AppState = (() => {
   let weeklyXp = [0, 0, 0, 0, 0, 0, 0];
   let weeklyMin = [0, 0, 0, 0, 0, 0, 0];
   let totalMin = 0;
+  let seasonXp = 0;
 
   async function loadAll() {
-    // localStorage에서 즉시 로드 (UI 빠르게)
     xp = Storage.get(CONFIG.KEYS.XP, 0);
     water = Storage.get(CONFIG.KEYS.WATER, 0);
     streak = Storage.get(CONFIG.KEYS.STREAK, 0);
@@ -47,19 +65,37 @@ const AppState = (() => {
     weeklyMin = Storage.get(CONFIG.KEYS.WEEKLY_MIN, [0, 0, 0, 0, 0, 0, 0]);
     totalMin = Storage.get(CONFIG.KEYS.TOTAL_MIN, 0);
     applyTheme(Storage.get(CONFIG.KEYS.THEME, 'amber'));
-    streak = recalcStreak(); // 실제 로그 기반으로 스트릭 재계산
+    streak = recalcStreak();
 
-    // Firestore에서 최신 프로필 동기화 (Firebase 준비 후)
+    // 시즌 처리
+    const { seasonKey } = getSeasonInfo();
+    const storedSeasonKey = Storage.get('rf_season_key', '');
+    const prevSeasonKey = (storedSeasonKey && storedSeasonKey !== seasonKey) ? storedSeasonKey : null;
+    if (storedSeasonKey !== seasonKey) {
+      seasonXp = 0;
+      Storage.set('rf_season_xp', 0);
+      Storage.set('rf_season_key', seasonKey);
+    } else {
+      seasonXp = Storage.get('rf_season_xp', 0);
+    }
+
     if (typeof FireDB !== 'undefined') {
       FireDB.onReady(async () => {
+        // 이전 시즌 보상 처리
+        if (prevSeasonKey) await _handleSeasonReset(prevSeasonKey);
+
         const profile = await FireDB.loadProfile();
         if (profile) {
-          // 클라우드 값이 로컬보다 크면 덮어씀 (다른 기기에서 진행한 경우)
           if ((profile.xp || 0) > xp) { xp = profile.xp; Storage.set(CONFIG.KEYS.XP, xp); }
           if ((profile.water || 0) > water) { water = profile.water; Storage.set(CONFIG.KEYS.WATER, water); }
           if (profile.totalMin > totalMin) { totalMin = profile.totalMin; Storage.set(CONFIG.KEYS.TOTAL_MIN, totalMin); }
           if (profile.weeklyMin) { weeklyMin = profile.weeklyMin; Storage.set(CONFIG.KEYS.WEEKLY_MIN, weeklyMin); }
           if (profile.lastPracticeDate) { lastPracticeDate = profile.lastPracticeDate; Storage.set(CONFIG.KEYS.LAST_PRACTICE_DATE, lastPracticeDate); }
+          // seasonXp: 같은 시즌이고 클라우드 값이 더 크면 덮어씀
+          if (profile.seasonKey === seasonKey && (profile.seasonXp || 0) > seasonXp) {
+            seasonXp = profile.seasonXp;
+            Storage.set('rf_season_xp', seasonXp);
+          }
           if (profile.chalProg && profile.chalWeek) {
             const localWeek = Storage.get('rf_chal_week_app', '');
             if (!localWeek || profile.chalWeek === localWeek) {
@@ -73,16 +109,16 @@ const AppState = (() => {
           renderDashboard();
           console.log('[AppState] 프로필 클라우드 동기화 완료');
         }
-        // 연습일지 동기화
         await Storage.syncLogsFromCloud();
-        streak = recalcStreak(); // 클라우드 일지 동기화 후 재계산
+        streak = recalcStreak();
         Storage.set(CONFIG.KEYS.STREAK, streak);
         CalendarView?.render();
-        // 레퍼토리 동기화
         await RepertoireTracker?.syncFromCloud();
+        CrewRanking?.render();
       });
     }
   }
+
 
   function saveAll() {
     // localStorage 즉시 저장
@@ -101,6 +137,7 @@ const AppState = (() => {
       FireDB.saveProfile({
         xp, water, streak, lastPracticeDate,
         weeklyXp, weeklyMin, totalMin,
+        seasonXp, seasonKey: getSeasonInfo().seasonKey,
         chalProg, chalWeek,
         username: FireDB.getUsername(),
         updatedAt: new Date().toISOString(),
@@ -110,6 +147,8 @@ const AppState = (() => {
 
   function addXP(amount) {
     xp += amount;
+    seasonXp += amount;
+    Storage.set('rf_season_xp', seasonXp);
     weeklyXp[new Date().getDay()] = (weeklyXp[new Date().getDay()] || 0) + amount;
     saveAll(); renderStats();
   }
@@ -158,6 +197,54 @@ const AppState = (() => {
     }
     streak = recalcStreak();
     saveAll();
+  }
+  async function _handleSeasonReset(prevSeasonKey) {
+    if (typeof FireDB === 'undefined' || !FireDB.isReady()) return;
+    try {
+      const myName = Storage.get(CONFIG.KEYS.USERNAME, '');
+      if (!myName) return;
+      const all = await FireDB.loadSeasonRankings(prevSeasonKey);
+      const ranked = all.filter(r => r.firstLogDate).sort((a, b) => (b.seasonXp || 0) - (a.seasonXp || 0));
+      const myIdx = ranked.findIndex(r => r.username === myName);
+      if (myIdx < 0) return; // 이번 시즌 미참가
+      const myRank = myIdx + 1;
+      const badge = CONFIG.SEASON_BADGES.find(b => b.rank === myRank) || CONFIG.SEASON_BADGES.find(b => b.rank === 99);
+      if (!badge) return;
+      const earned = Storage.get('rf_season_badges', []);
+      earned.push({ badgeId: badge.id, season: prevSeasonKey, rank: myRank, earnedAt: new Date().toISOString() });
+      Storage.set('rf_season_badges', earned);
+      setTimeout(() => showToast(`🎉 시즌 종료! ${myRank}위 → ${badge.emoji} ${badge.label} 획득!`, 'success'), 1500);
+    } catch (e) { console.warn('[Season] 보상 처리 실패:', e); }
+  }
+
+  async function updateRanking() {
+    if (typeof FireDB === 'undefined' || !FireDB.isReady() || !FireDB.getUsername()) return;
+    const { seasonKey, start } = getSeasonInfo();
+    const myName = Storage.get(CONFIG.KEYS.USERNAME, '') || FireDB.getUsername();
+    const myAvatar = Storage.get(CONFIG.KEYS.AVATAR, '🎸');
+    // 이번 시즌 첫 연습일 탐색
+    let firstLogDate = Storage.get('rf_s_first_' + seasonKey, null);
+    if (!firstLogDate) {
+      const d = new Date(start);
+      const todayStr = getTodayStr();
+      while (true) {
+        const ds = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+        if (ds > todayStr) break;
+        const log = Storage.getLog(ds);
+        if (log && (log.totalMin || 0) > 0) {
+          firstLogDate = ds;
+          Storage.set('rf_s_first_' + seasonKey, ds);
+          break;
+        }
+        d.setDate(d.getDate() + 1);
+      }
+    }
+    if (!firstLogDate) return; // 이번 시즌 연습 없음 → 랭킹 미등록
+    await FireDB.saveRanking(seasonKey, {
+      username: myName, avatar: myAvatar,
+      seasonXp, firstLogDate,
+      updatedAt: new Date().toISOString(),
+    }).catch(e => console.warn('[AppState] updateRanking 실패:', e));
   }
 
   function checkHarvest() {
@@ -611,6 +698,7 @@ const AppState = (() => {
     // Phase 7 추가
     getUserId, openProfileModal, closeProfileModal, saveProfile, _selectAvatar,
     getTodayMin: () => Storage.getLog(getTodayStr())?.totalMin || 0,
+    updateRanking,
   };
 })();
 
