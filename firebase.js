@@ -182,6 +182,21 @@ const FireDB = (() => {
       return snap.docs.map(d => ({ id: d.id, ...d.data() }));
     } catch (e) { console.warn('[FireDB] fetchPosts 실패:', e); return []; }
   }
+  async function fetchPostsPage(lastDoc, limitNum) {
+    try {
+      let q = _boardCol().orderBy('createdAt', 'desc').limit(limitNum || 10);
+      if (lastDoc) q = q.startAfter(lastDoc);
+      const snap = await q.get();
+      return {
+        posts: snap.docs.map(d => ({ id: d.id, ...d.data() })),
+        lastDoc: snap.docs.length ? snap.docs[snap.docs.length - 1] : null,
+        hasMore: snap.docs.length === (limitNum || 10),
+      };
+    } catch (e) {
+      console.warn('[FireDB] fetchPostsPage 실패:', e);
+      return { posts: [], lastDoc: null, hasMore: false };
+    }
+  }
 
   async function savePost(post) {
     try {
@@ -221,19 +236,21 @@ const FireDB = (() => {
   function subscribeBoard(callback) {
     return _boardCol()
       .orderBy('createdAt', 'desc')
-      .limit(100)
+      .limit(10)
       .onSnapshot(snap => {
         const posts = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-        callback(posts);
+        const lastDoc = snap.docs.length ? snap.docs[snap.docs.length - 1] : null;
+        callback(posts, lastDoc);
       }, err => console.warn('[FireDB] subscribeBoard 오류:', err));
   }
+
 
   return {
     onReady: onFirebaseReady,
     saveProfile, loadProfile,
     saveLog, loadLog, loadAllLogs, deleteLog,
     saveRepertoire, loadRepertoire,
-    fetchPosts, savePost, updatePost, deletePost,
+    fetchPosts, fetchPostsPage, savePost, updatePost, deletePost,
     subscribeBoard,
     saveRanking, loadSeasonRankings,
     savePresets, loadPresets,
