@@ -3137,7 +3137,7 @@ const CrewBoard = (() => {
       }
       feed.appendChild(moreWrap);
     }
-
+  }
   // ── 최초 로드 ────────────────────────────────────────────────────────────
   async function init() {
     render(_getLocal());
@@ -3182,7 +3182,7 @@ const CrewBoard = (() => {
     deleteComment, startEditComment, saveEditComment, cancelEditComment,
     previewPractice,
   };
-
+})();  
 // ═══════════════════════════════════════════════════════════════════════════
 // DOMContentLoaded: 앱 초기화
 // ═══════════════════════════════════════════════════════════════════════════
