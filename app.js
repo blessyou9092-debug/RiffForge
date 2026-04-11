@@ -1150,6 +1150,10 @@ const StudioUI = (() => {
   let selectedKey = 'A';
   let editableProgression = [];   // [{root, type}]
   let _lastStudioChord = null;    // 마지막으로 표시된 코드 (정지 후에도 유지)
+  // ── 유저 백킹 프리셋 ────────────────────────────────────────────────
+  let _userPresets = [];
+  try { _userPresets = JSON.parse(localStorage.getItem('rf_user_presets') || '[]'); } catch { _userPresets = []; }
+
 
   // ── BPM 동기화 헬퍼 ──────────────────────────────────────────────
   function syncBpmDisplay(bpm) {
@@ -1636,25 +1640,207 @@ const StudioUI = (() => {
     const lt = document.getElementById('sb-label-target'); if (lt) lt.textContent = targetBpm;
     if (barCountEl) barCountEl.textContent = _sbActive ? `${_sbBarCount}/${barsPerStep} 마디` : '대기 중';
   }
+  // ── 유저 프리셋 저장/불러오기 ───────────────────────────────────────
+  function _saveUserPresets() {
+    localStorage.setItem('rf_user_presets', JSON.stringify(_userPresets));
+    if (typeof FireDB !== 'undefined' && FireDB.isReady() && FireDB.getUsername()) {
+      FireDB.savePresets(_userPresets).catch(e => console.warn('[Presets] 클라우드 저장 실패:', e));
+    }
+  }
 
-  // ── 장르 카드 렌더링 ─────────────────────────────────────────────
+  async function loadUserPresets() {
+    try { _userPresets = JSON.parse(localStorage.getItem('rf_user_presets') || '[]'); } catch { _userPresets = []; }
+    if (typeof FireDB !== 'undefined') {
+      FireDB.onReady(async () => {
+        const cloud = await FireDB.loadPresets();
+        if (cloud?.length) {
+          const localIds = new Set(_userPresets.map(p => p.id));
+          const merged = [..._userPresets, ...cloud.filter(p => !localIds.has(p.id))];
+          if (merged.length > _userPresets.length) {
+            _userPresets = merged.slice(0, 6);
+            localStorage.setItem('rf_user_presets', JSON.stringify(_userPresets));
+          }
+        }
+        renderGenreCards();
+      });
+    }
+  }
+
+  function loadUserPreset(id) {
+    const p = _userPresets.find(pr => pr.id == id);
+    if (!p) return;
+    editableProgression = p.progression.map(c => ({ ...c }));
+    selectedKey = p.defaultKey;
+    setBpm(p.defaultBpm);
+    const keyEl = document.getElementById('backing-key');
+    if (keyEl) keyEl.value = selectedKey;
+    selectedGenre = CONFIG.BACKING_TRACKS.find(g => g.id === p.genreId) || null;
+    document.querySelectorAll('.genre-card, .user-preset-card').forEach(el => {
+      el.style.borderColor = ''; el.style.boxShadow = '';
+    });
+    const card = document.querySelector(`[data-preset-id="${id}"]`);
+    if (card) { card.style.borderColor = '#FF6B00'; card.style.boxShadow = '0 0 0 2px #FF6B0066'; }
+    renderProgressionEditor();
+    renderScaleRecommend();
+    updateFretboard();
+    showToast(`⭐ "${p.name}" 프리셋 불러왔습니다`, 'info');
+  }
+
+  function openSavePresetModal() {
+    if (_userPresets.length >= 6) { showToast('프리셋은 최대 6개까지 저장할 수 있어요', 'warning'); return; }
+    if (editableProgression.length === 0) { showToast('먼저 코드를 추가해주세요', 'warning'); return; }
+    const existing = document.getElementById('save-preset-modal');
+    if (existing) existing.remove();
+
+    let repSongs = [];
+    try { repSongs = JSON.parse(localStorage.getItem('rf_repertoire') || '[]'); } catch { }
+
+    const styleOpts = CONFIG.BACKING_TRACKS.map(g =>
+      `<option value="${g.id}" ${g.id === (selectedGenre?.id || 'blues') ? 'selected' : ''}>${g.emoji} ${g.name}</option>`
+    ).join('');
+    const repOpts = `<option value="">연결 안 함</option>` +
+      repSongs.map(s => `<option value="${s.id}">${s.title}${s.artist ? ' — ' + s.artist : ''}</option>`).join('');
+
+    const modal = document.createElement('div');
+    modal.id = 'save-preset-modal';
+    modal.className = 'fixed inset-0 z-50 flex items-center justify-center p-4';
+    modal.style.background = 'rgba(0,0,0,0.45)';
+    modal.innerHTML = `
+      <div class="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-5">
+        <p class="font-black text-gray-800 text-base mb-4">💾 현재 코드 진행 저장</p>
+        <div class="space-y-3">
+          <div>
+            <label class="text-xs font-bold text-gray-500 block mb-1">프리셋 이름</label>
+            <input id="preset-name-input" type="text" placeholder="나만의 블루스..." maxlength="20"
+              class="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-amber-400" />
+          </div>
+          <div>
+            <label class="text-xs font-bold text-gray-500 block mb-1">반주 스타일</label>
+            <select id="preset-style-select"
+              class="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-amber-400">
+              ${styleOpts}
+            </select>
+          </div>
+          <div>
+            <label class="text-xs font-bold text-gray-500 block mb-1">레퍼토리 곡 연결 <span class="font-normal text-gray-400">(선택)</span></label>
+            <select id="preset-rep-select"
+              class="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-amber-400">
+              ${repOpts}
+            </select>
+          </div>
+          <p class="text-[10px] text-gray-400">코드 ${editableProgression.length}개 · BPM ${_bpm} · 키 ${selectedKey || 'C'}</p>
+        </div>
+        <div class="flex gap-2 mt-4">
+          <button onclick="StudioUI.confirmSavePreset()"
+            class="flex-1 py-2.5 bg-amber-500 hover:bg-amber-600 text-white font-bold text-sm rounded-xl transition-colors">저장</button>
+          <button onclick="document.getElementById('save-preset-modal').remove()"
+            class="px-4 py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-600 font-bold text-sm rounded-xl">취소</button>
+        </div>
+      </div>`;
+    modal.addEventListener('click', e => { if (e.target === modal) modal.remove(); });
+    document.body.appendChild(modal);
+    document.getElementById('preset-name-input')?.focus();
+  }
+
+  function confirmSavePreset() {
+    const name = (document.getElementById('preset-name-input')?.value || '').trim();
+    const genreId = document.getElementById('preset-style-select')?.value || 'blues';
+    const linkedRepId = document.getElementById('preset-rep-select')?.value || null;
+    if (!name) { showToast('프리셋 이름을 입력해주세요', 'warning'); return; }
+    _userPresets.push({
+      id: Date.now(), name, genreId,
+      progression: editableProgression.map(c => ({ ...c })),
+      defaultBpm: _bpm,
+      defaultKey: selectedKey || 'C',
+      linkedRepId: linkedRepId ? parseInt(linkedRepId) : null,
+      createdAt: new Date().toISOString(),
+    });
+    _saveUserPresets();
+    document.getElementById('save-preset-modal')?.remove();
+    renderGenreCards();
+    showToast(`✅ "${name}" 프리셋이 저장되었습니다!`, 'success');
+  }
+
+  function deleteUserPreset(id) {
+    const p = _userPresets.find(pr => pr.id == id);
+    if (!p || !confirm(`"${p.name}" 프리셋을 삭제할까요?`)) return;
+    _userPresets = _userPresets.filter(pr => pr.id != id);
+    _saveUserPresets();
+    renderGenreCards();
+    showToast('프리셋이 삭제되었습니다', 'info');
+  }
+
+  function startEditPresetName(id) {
+    const nameEl = document.querySelector(`[data-preset-id="${id}"] .preset-name`);
+    if (!nameEl) return;
+    const cur = nameEl.textContent;
+    nameEl.outerHTML = `<input
+      id="preset-edit-${id}" type="text" value="${cur}" maxlength="20"
+      onclick="event.stopPropagation()"
+      onblur="StudioUI.finishEditPresetName(${id}, this.value)"
+      onkeydown="if(event.key==='Enter')this.blur();if(event.key==='Escape'){this.dataset.cancel='1';this.blur();}"
+      class="preset-name flex-1 text-[11px] font-bold text-amber-700 bg-transparent border-b border-amber-400 focus:outline-none min-w-0 w-20" />`;
+    document.getElementById(`preset-edit-${id}`)?.focus();
+    document.getElementById(`preset-edit-${id}`)?.select();
+  }
+
+  function finishEditPresetName(id, newName) {
+    if (!newName?.trim()) { renderGenreCards(); return; }
+    const p = _userPresets.find(pr => pr.id == id);
+    if (!p) return;
+    p.name = newName.trim();
+    _saveUserPresets();
+    renderGenreCards();
+  }
+
   function renderGenreCards() {
     const c = document.getElementById('backing-genres');
     if (!c) return;
-    c.innerHTML = CONFIG.BACKING_TRACKS.map(g => {
+
+    const defaultCards = CONFIG.BACKING_TRACKS.map(g => {
       const tip = (g.tip || '').replace(/'/g, '&#39;');
-      return `
-      <button data-genre="${g.id}" onclick="StudioUI.selectGenre('${g.id}')"
+      return `<button data-genre="${g.id}" onclick="StudioUI.selectGenre('${g.id}')"
         onmouseenter="document.getElementById('backing-tip').textContent='${tip}'"
         onmouseleave="document.getElementById('backing-tip').textContent=''"
         class="genre-card flex items-center gap-1.5 px-2 py-1.5 rounded-lg
-          bg-white border border-gray-100 shadow-sm
-          hover:border-orange-300 hover:shadow-md
+          bg-white border border-gray-100 shadow-sm hover:border-orange-300 hover:shadow-md
           transition-all hover:scale-105 active:scale-95">
         <span class="text-base shrink-0">${g.emoji}</span>
         <span class="font-bold text-[11px] text-gray-700 leading-tight text-left">${g.name}</span>
       </button>`;
     }).join('');
+
+    const userCards = _userPresets.map(p => {
+      const styleName = CONFIG.BACKING_TRACKS.find(g => g.id === p.genreId)?.name || '';
+      return `<button data-preset-id="${p.id}" onclick="StudioUI.loadUserPreset(${p.id})"
+        class="user-preset-card relative flex items-center gap-1.5 px-2 py-1.5 rounded-lg
+          bg-amber-50 border border-amber-200 shadow-sm hover:border-amber-400 hover:shadow-md
+          transition-all hover:scale-105 active:scale-95 group">
+        <span class="text-base shrink-0">⭐</span>
+        <div class="flex-1 min-w-0 text-left overflow-hidden">
+          <span class="preset-name font-bold text-[11px] text-amber-700 leading-tight block truncate">${p.name}</span>
+          <span class="text-[9px] text-amber-400 leading-none">${styleName}</span>
+        </div>
+        <div class="absolute -top-1.5 -right-1 hidden group-hover:flex gap-0.5 z-10">
+          <button onclick="event.stopPropagation();StudioUI.startEditPresetName(${p.id})"
+            class="w-4 h-4 bg-blue-400 hover:bg-blue-500 rounded-full text-white flex items-center justify-center text-[9px] transition-colors">✏</button>
+          <button onclick="event.stopPropagation();StudioUI.deleteUserPreset(${p.id})"
+            class="w-4 h-4 bg-red-400 hover:bg-red-500 rounded-full text-white flex items-center justify-center text-[9px] transition-colors">✕</button>
+        </div>
+      </button>`;
+    }).join('');
+
+    const addBtn = _userPresets.length < 6 ? `
+      <button onclick="StudioUI.openSavePresetModal()"
+        class="flex items-center gap-1.5 px-2 py-1.5 rounded-lg bg-gray-50
+          border border-dashed border-gray-300 hover:border-orange-300
+          hover:bg-orange-50 text-gray-400 hover:text-orange-500
+          transition-all hover:scale-105 active:scale-95">
+        <span class="text-base shrink-0">＋</span>
+        <span class="font-bold text-[11px] leading-tight">프리셋 저장</span>
+      </button>` : '';
+
+    c.innerHTML = defaultCards + userCards + addBtn;
   }
 
   // ── 지판 키/스케일 셀렉트 초기화 ────────────────────────────────
@@ -1682,6 +1868,7 @@ const StudioUI = (() => {
   // ── 페이지 진입 시 초기화 ────────────────────────────────────────
   function onEnter() {
     initSelects();
+    loadUserPresets();
     renderGenreCards();
     renderBeatPattern();
     // 초기 지판: 진행의 첫 코드 코드톤, 없으면 Am 기본값
@@ -1715,6 +1902,10 @@ const StudioUI = (() => {
     // 백킹
     selectGenre, setKey, setScale, toggleBacking, syncPlay, stopAll,
     editChordRoot, editChordType, addChord, removeChord, previewChord,
+    //백킹 유저 프리셋
+    loadUserPresets, loadUserPreset, openSavePresetModal, confirmSavePreset,
+    deleteUserPreset, startEditPresetName, finishEditPresetName,
+    getUserPresets: () => _userPresets,
     // 공통
     onEnter,
     // 스피드 빌더
