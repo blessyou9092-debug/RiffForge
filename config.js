@@ -478,13 +478,13 @@ const CONFIG = {
   ],
 
 
-  // ── 가상 크루 멤버 (랭킹 테스트용 목 데이터) ─────────────────────
-  MOCK_CREW: [
-    { id: 'mock_1', name: '재훈', avatar: '🤘', monthlyXp: 4200, waterCount: 67, streak: 14, masteredCount: 3, challengeDone: 4 },
-    { id: 'mock_2', name: '수빈', avatar: '🎵', monthlyXp: 3800, waterCount: 52, streak: 9, masteredCount: 2, challengeDone: 3 },
-    { id: 'mock_3', name: '다은', avatar: '🌟', monthlyXp: 5100, waterCount: 91, streak: 21, masteredCount: 5, challengeDone: 6 },
-    { id: 'mock_4', name: '준서', avatar: '🔥', monthlyXp: 2900, waterCount: 38, streak: 5, masteredCount: 1, challengeDone: 2 },
-    { id: 'mock_5', name: '하린', avatar: '🎸', monthlyXp: 6300, waterCount: 112, streak: 28, masteredCount: 7, challengeDone: 5 },
+  // ── 크루 시즌 랭킹 설정 ───────────────────────────────────────────
+  SEASON_ANCHOR: '2026-03-30', // 격주 시즌 기준일 (반드시 월요일)
+  SEASON_BADGES: [
+    { id: 'season_rank1', rank: 1, label: '시즌 챔피언', emoji: '🏆', svgPath: 'assets/badges/season_rank1.svg' },
+    { id: 'season_rank2', rank: 2, label: '시즌 준우승', emoji: '🥈', svgPath: 'assets/badges/season_rank2.svg' },
+    { id: 'season_rank3', rank: 3, label: '시즌 3위',   emoji: '🥉', svgPath: 'assets/badges/season_rank3.svg' },
+    { id: 'season_part',  rank: 99, label: '시즌 참가', emoji: '🎸', svgPath: 'assets/badges/season_part.svg' },
   ],
 };
 
