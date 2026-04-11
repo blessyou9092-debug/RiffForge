@@ -371,8 +371,30 @@ const AppState = (() => {
     const cur = Storage.get(CONFIG.KEYS.USERNAME, '');
     const name = prompt('이름을 입력하세요', cur);
     if (name === null) return;
-    Storage.set(CONFIG.KEYS.USERNAME, name.trim());
-    renderGreeting();
+    const trimmed = name.trim();
+    if (!trimmed) return;
+
+    // 유저명이 변경된 경우: 로컬 데이터 초기화 안내
+    if (cur && trimmed !== cur) {
+      const ok = confirm(
+        `사용자 이름을 "${cur}"에서 "${trimmed}"(으)로 변경하면\n이 기기의 로컬 데이터가 초기화됩니다.\n\n서버에 저장된 데이터는 유지되며,\n변경 후 자동으로 불러옵니다.\n\n계속하시겠습니까?`
+      );
+      if (!ok) return;
+
+      // rf_ 로 시작하는 모든 로컬 키 삭제 (username 키는 새 이름으로 덮어씀)
+      Object.keys(localStorage)
+        .filter(k => k.startsWith('rf_') && k !== CONFIG.KEYS.USERNAME)
+        .forEach(k => localStorage.removeItem(k));
+    }
+
+    Storage.set(CONFIG.KEYS.USERNAME, trimmed);
+
+    // 유저명이 바뀐 경우: 페이지 새로고침으로 Firestore에서 신규 유저 데이터 재로드
+    if (cur && trimmed !== cur) {
+      location.reload();
+    } else {
+      renderGreeting();
+    }
   }
 
   // 인사말 렌더링
