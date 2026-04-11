@@ -998,20 +998,26 @@ const RepertoireTracker = (() => {
     const allIds = new Set([...localMap.keys(), ...cloudMap.keys()]);
 
     const merged = [];
-    allIds.forEach(id => {
+    allIds.forEach(function(id) {
       const lo = localMap.get(id);
       const cl = cloudMap.get(id);
-      if (!lo) { merged.push(cl); return; }   // 로컬에 없으면 클라우드 사용
-      if (!cl) { merged.push(lo); return; }   // 클라우드에 없으면 로컬 사용
-      // 양쪽 존재: parts는 더 많은 쪽 우선, 나머지 필드는 로컬 우선
-      const useParts = (cl.parts?.length || 0) > (lo.parts?.length || 0)
-        ? cl.parts : (lo.parts || []);
-      merged.push({ ...cl, ...lo, parts: useParts });
+      if (!lo) { merged.push(cl); return; }
+      if (!cl) { merged.push(lo); return; }
+
+      // updatedAt 기준으로 더 최신 버전 우선
+      const loTime = lo.updatedAt ? new Date(lo.updatedAt).getTime() : 0;
+      const clTime = cl.updatedAt ? new Date(cl.updatedAt).getTime() : 0;
+      const newer = loTime >= clTime ? lo : cl;
+      const older = loTime >= clTime ? cl : lo;
+
+      // 최신 버전 기준으로, 누락된 필드만 오래된 버전에서 보완
+      merged.push(Object.assign({}, older, newer));
     });
 
     localStorage.setItem(KEY, JSON.stringify(merged));
     render();
   }
+
 
   function stateFromProgress(pct) {
     if (pct >= 90) return 'mastered';
@@ -1048,6 +1054,7 @@ const RepertoireTracker = (() => {
       id: Date.now(), title, artist, bpm, deadline,
       progress: 0, state: 'learning',
       addedAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
       lastPracticedAt: null,
       parts: [],
       partsManual: false,
@@ -1068,6 +1075,7 @@ const RepertoireTracker = (() => {
     if (fromManual) s.partsManual = true;
     s.state = stateFromProgress(pct);
     if (s.state === 'mastered' && !s.masteredAt) s.masteredAt = new Date().toISOString();
+    s.updatedAt = new Date().toISOString();
     save(songs);
     if (typeof ChallengeTracker !== 'undefined') ChallengeTracker.addRepLevelUp(oldState, s.state);
     render();
@@ -1078,6 +1086,7 @@ const RepertoireTracker = (() => {
     const s = songs.find(s => s.id === id);
     if (!s) return;
     s[field] = value;
+    s.updatedAt = new Date().toISOString();
     save(songs);
   }
 
