@@ -25,6 +25,12 @@ const Storage = {
       FireDB.saveLog(dateStr, data).catch(e => console.warn('log sync 실패:', e));
     }
   },
+  deleteLog(dateStr) {
+    localStorage.removeItem(CONFIG.KEYS.PRACTICE_LOG + dateStr);
+    if (typeof FireDB !== 'undefined' && FireDB.isReady() && FireDB.getUsername()) {
+      FireDB.deleteLog(dateStr).catch(e => console.warn('log delete 실패:', e));
+    }
+  },
 
   // ── Firestore에서 전체 일지 동기화 (앱 시작 시 1회 호출) ─────────
   async syncLogsFromCloud() {
