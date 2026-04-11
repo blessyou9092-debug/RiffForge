@@ -1203,21 +1203,38 @@ const ChallengeTracker = (() => {
 
 
 // ═══════════════════════════════════════════════════════════════════════════
-// CrewRanking: 실제 Firestore 기반 시즌 랭킹
+// CrewRanking: 실제 Firestore 기반 시즌 랭킹 (4개 카테고리)
 // ═══════════════════════════════════════════════════════════════════════════
 const CrewRanking = (() => {
+  const CATEGORIES = [
+    { id: 'seasonXp',    label: '시즌 XP',    icon: '⚡', unit: 'XP', key: r => r.seasonXp || 0,    color: 'amber',  localKey: 'rf_season_xp' },
+    { id: 'seasonWater', label: '시즌 물주기', icon: '💧', unit: '회', key: r => r.seasonWater || 0, color: 'blue',   localKey: 'rf_season_water' },
+    { id: 'streak',      label: '연속 출석',   icon: '🔥', unit: '일', key: r => r.streak || 0,      color: 'orange', localKey: CONFIG.KEYS.STREAK },
+    { id: 'seasonMin',   label: '연습 시간',   icon: '⏱', unit: '분', key: r => r.seasonMin || 0,   color: 'green',  localKey: 'rf_season_min' },
+  ];
+  const GRAD = {
+    amber: 'from-amber-400 to-orange-500',
+    blue:  'from-blue-400 to-cyan-500',
+    orange:'from-orange-400 to-red-500',
+    green: 'from-green-400 to-emerald-500',
+  };
   const MEDALS = ['🥇', '🥈', '🥉'];
 
-  async function _fetchRanked() {
+  let _cache = null, _cacheTime = 0;
+
+  async function _fetchAll() {
+    if (_cache && Date.now() - _cacheTime < 60000) return _cache;
     if (typeof FireDB === 'undefined' || !FireDB.isReady()) return [];
     const { seasonKey } = getSeasonInfo();
     const all = await FireDB.loadSeasonRankings(seasonKey);
-    return all
-      .filter(r => r.firstLogDate)
-      .sort((a, b) => (b.seasonXp || 0) - (a.seasonXp || 0));
+    _cache = all.filter(r => r.firstLogDate);
+    _cacheTime = Date.now();
+    return _cache;
   }
 
-  async function openModal() {
+  async function openModal(catId) {
+    const cat = CATEGORIES.find(c => c.id === catId);
+    if (!cat) return;
     const existing = document.getElementById('ranking-modal');
     if (existing) existing.remove();
     const { daysLeft } = getSeasonInfo();
@@ -1230,9 +1247,9 @@ const CrewRanking = (() => {
     modal.innerHTML = `
       <div class="bg-white rounded-3xl shadow-2xl w-full max-w-sm overflow-hidden">
         <div class="flex items-center gap-3 px-5 py-4 bg-amber-50 border-b border-amber-200">
-          <span class="text-2xl">⚡</span>
+          <span class="text-2xl">${cat.icon}</span>
           <div>
-            <p class="font-black text-gray-800 text-base">시즌 XP 랭킹</p>
+            <p class="font-black text-gray-800 text-base">${cat.label} 랭킹</p>
             <p class="text-xs text-gray-400">상위 3위 + 내 순위 · ${dLabel}</p>
           </div>
           <button onclick="document.getElementById('ranking-modal').remove()"
@@ -1246,18 +1263,18 @@ const CrewRanking = (() => {
     document.body.appendChild(modal);
 
     try {
-      const ranked = await _fetchRanked();
+      const all = await _fetchAll();
+      const ranked = [...all].sort((a, b) => cat.key(b) - cat.key(a));
       const myName = Storage.get(CONFIG.KEYS.USERNAME, '');
       const myIdx = myName ? ranked.findIndex(r => r.username === myName) : -1;
       const body = document.getElementById('ranking-modal-body');
       if (!body) return;
 
       if (ranked.length === 0) {
-        body.innerHTML = `<p class="text-center text-gray-400 py-8 text-sm">아직 참가자가 없어요 🎸<br><span class="text-xs">연습 일지를 저장하면 랭킹에 참가돼요</span></p>`;
+        body.innerHTML = `<p class="text-center text-gray-400 py-8 text-sm">아직 참가자가 없어요 🎸<br><span class="text-xs">연습 일지를 저장하면 자동 등록됩니다</span></p>`;
         return;
       }
 
-      // 표시할 인덱스: 0,1,2 + 내 순위(3 이상일 때)
       const showSet = new Set([0, 1, 2]);
       if (myIdx >= 3) showSet.add(myIdx);
 
@@ -1265,7 +1282,6 @@ const CrewRanking = (() => {
       ranked.forEach((r, i) => {
         if (!showSet.has(i)) return;
         const isMe = r.username === myName;
-        // 내 순위와 3위 사이 구분선
         if (i === myIdx && myIdx > 3) {
           rows += `<div class="flex items-center gap-2 my-1.5">
             <div class="flex-1 border-t border-dashed border-gray-200"></div>
@@ -1277,9 +1293,9 @@ const CrewRanking = (() => {
           <span class="text-lg w-7 text-center shrink-0">${i < 3 ? MEDALS[i] : (i + 1) + '위'}</span>
           <span class="text-xl shrink-0">${r.avatar || '🎸'}</span>
           <div class="flex-1 min-w-0">
-            <p class="text-sm font-bold text-gray-800 truncate">${r.username}${isMe ? ' <span class="text-amber-500">(나)</span>' : ''}</p>
+            <p class="text-sm font-bold text-gray-800 truncate">${r.username}${isMe ? ' <span class="text-amber-500 text-xs">(나)</span>' : ''}</p>
           </div>
-          <span class="text-sm font-black text-amber-600 shrink-0">${(r.seasonXp || 0).toLocaleString()} XP</span>
+          <span class="text-sm font-black text-amber-600 shrink-0">${cat.key(r).toLocaleString()} ${cat.unit}</span>
         </div>`;
       });
 
@@ -1299,66 +1315,59 @@ const CrewRanking = (() => {
     const { daysLeft } = getSeasonInfo();
     const dLabel = daysLeft <= 0 ? 'D-DAY' : `D-${daysLeft}`;
     const myName = Storage.get(CONFIG.KEYS.USERNAME, '');
-    const mySeasonXp = Storage.get('rf_season_xp', 0);
 
-    board.innerHTML = `<div class="text-center text-gray-300 py-6 text-sm">불러오는 중...</div>`;
+    // 스켈레톤
+    board.innerHTML = CATEGORIES.map(() =>
+      `<div class="rounded-3xl bg-gray-100 animate-pulse" style="min-height:190px"></div>`
+    ).join('');
 
-    let ranked = [];
-    try {
-      ranked = await _fetchRanked();
-    } catch { /* 오프라인 처리 */ }
+    let all = [];
+    try { all = await _fetchAll(); } catch { }
 
-    const top = ranked[0] || null;
-    const myIdx = myName ? ranked.findIndex(r => r.username === myName) : -1;
-    const myRank = myIdx >= 0 ? myIdx + 1 : null;
+    board.innerHTML = CATEGORIES.map(cat => {
+      const ranked = [...all].sort((a, b) => cat.key(b) - cat.key(a));
+      const top = ranked[0] || null;
+      const myIdx = myName ? ranked.findIndex(r => r.username === myName) : -1;
+      const myRank = myIdx >= 0 ? myIdx + 1 : null;
+      const myVal = Storage.get(cat.localKey, 0);
+      const g = GRAD[cat.color];
 
-    board.innerHTML = `
-      <div onclick="CrewRanking.openModal()"
-        class="relative overflow-hidden rounded-3xl cursor-pointer
-          bg-gradient-to-br from-amber-400 to-orange-500
+      return `<div onclick="CrewRanking.openModal('${cat.id}')"
+        class="relative overflow-hidden rounded-3xl cursor-pointer bg-gradient-to-br ${g}
           shadow-lg hover:shadow-xl hover:-translate-y-1 transition-all duration-200 flex flex-col"
-        style="min-height:210px">
-        <!-- 배경 장식 -->
-        <div class="absolute -top-6 -right-6 w-28 h-28 rounded-full bg-white/10 pointer-events-none"></div>
-        <div class="absolute -bottom-4 -left-4 w-16 h-16 rounded-full bg-white/10 pointer-events-none"></div>
+        style="min-height:190px">
+        <div class="absolute -top-5 -right-5 w-20 h-20 rounded-full bg-white/10 pointer-events-none"></div>
+        <div class="absolute -bottom-3 -left-3 w-12 h-12 rounded-full bg-white/10 pointer-events-none"></div>
 
-        <!-- 헤더 -->
-        <div class="flex items-center justify-between px-4 pt-4 pb-2">
-          <div class="flex items-center gap-2">
-            <span class="text-2xl drop-shadow">⚡</span>
-            <p class="text-xs font-black text-white/90 tracking-wide">시즌 XP 랭킹</p>
+        <div class="flex items-center justify-between px-3 pt-3 pb-1">
+          <div class="flex items-center gap-1.5">
+            <span class="text-xl drop-shadow">${cat.icon}</span>
+            <p class="text-[11px] font-black text-white/90">${cat.label}</p>
           </div>
-          <div class="flex items-center gap-2">
-            <span class="text-[11px] font-black bg-white/20 text-white rounded-full px-2 py-0.5">${dLabel}</span>
-            <span class="text-[10px] text-white/60 font-bold">탭하여 전체보기 →</span>
-          </div>
+          <span class="text-[10px] font-black bg-white/20 text-white rounded-full px-1.5 py-0.5">${dLabel}</span>
         </div>
 
-        <!-- 1위 섹션 -->
         ${top ? `
-        <div class="flex-1 flex flex-col items-center justify-center px-4 py-2 gap-1">
-          <div class="text-3xl drop-shadow-md">${top.avatar || '🎸'}</div>
-          <div class="flex items-center gap-1">
-            <span class="text-base">🥇</span>
-            <p class="text-sm font-black text-white drop-shadow truncate max-w-[120px]">${top.username}${top.username === myName ? ' (나)' : ''}</p>
+        <div class="flex-1 flex flex-col items-center justify-center px-3 py-1 gap-0.5">
+          <div class="text-2xl drop-shadow">${top.avatar || '🎸'}</div>
+          <div class="flex items-center gap-0.5">
+            <span class="text-sm">🥇</span>
+            <p class="text-xs font-black text-white drop-shadow truncate max-w-[80px]">${top.username}</p>
           </div>
-          <p class="text-xl font-black text-white drop-shadow-md">${(top.seasonXp || 0).toLocaleString()}<span class="text-sm font-bold ml-0.5 opacity-80">XP</span></p>
+          <p class="text-lg font-black text-white drop-shadow">${cat.key(top).toLocaleString()}<span class="text-xs ml-0.5 opacity-80">${cat.unit}</span></p>
         </div>
         ` : `
-        <div class="flex-1 flex flex-col items-center justify-center px-4 py-2">
-          <p class="text-white/80 text-sm font-bold">아직 참가자가 없어요</p>
-          <p class="text-white/60 text-xs mt-1">연습 일지를 저장하면 자동 등록 🎸</p>
+        <div class="flex-1 flex items-center justify-center">
+          <p class="text-white/60 text-xs font-medium">아직 참가자 없음</p>
         </div>
         `}
 
-        <!-- 내 순위 배지 -->
-        <div class="mx-3 mb-4 px-3 py-2 rounded-2xl bg-white/20 backdrop-blur-sm flex items-center justify-between">
-          <span class="text-[11px] text-white/80 font-bold">내 순위</span>
-          <span class="text-xs font-black text-white">
-            ${myRank ? (myRank === 1 ? '👑 1위!' : myRank + '위') : '미참가'} · ${mySeasonXp.toLocaleString()} XP
-          </span>
+        <div class="mx-2 mb-3 px-2.5 py-1.5 rounded-2xl bg-white/20 backdrop-blur-sm flex items-center justify-between">
+          <span class="text-[10px] text-white/80 font-bold">내 순위</span>
+          <span class="text-[11px] font-black text-white">${myRank ? (myRank === 1 ? '👑 1위!' : myRank + '위') : '미참가'} · ${myVal.toLocaleString()} ${cat.unit}</span>
         </div>
       </div>`;
+    }).join('');
   }
 
   return { render, openModal };
