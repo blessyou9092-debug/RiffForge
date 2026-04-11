@@ -146,6 +146,22 @@ const FireDB = (() => {
       return snap.exists ? snap.data().songs : null;
     } catch (e) { console.warn('[FireDB] loadRepertoire 실패:', e); return null; }
   }
+  // ── 유저 백킹 프리셋 ──────────────────────────────────────────────────────
+  async function savePresets(presets) {
+    const ref = _userDoc('data/presets');
+    if (!ref) return;
+    try { await ref.set({ presets }); }
+    catch (e) { console.warn('[FireDB] savePresets 실패:', e); }
+  }
+
+  async function loadPresets() {
+    const ref = _userDoc('data/presets');
+    if (!ref) return null;
+    try {
+      const snap = await ref.get();
+      return snap.exists ? snap.data().presets : null;
+    } catch (e) { console.warn('[FireDB] loadPresets 실패:', e); return null; }
+  }
 
   // ── 크루 게시판 ───────────────────────────────────────────────────────────
   const _boardCol = () => _db.collection('board');
@@ -213,6 +229,7 @@ const FireDB = (() => {
     fetchPosts, savePost, updatePost, deletePost,
     subscribeBoard,
     saveRanking, loadSeasonRankings,
+    savePresets, loadPresets,
     isReady: () => _fbReady,
     getUsername: _username,
   };
