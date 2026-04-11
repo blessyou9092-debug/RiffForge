@@ -919,17 +919,31 @@ const CalendarView = (() => {
 })();
 
 // ═══════════════════════════════════════════════════════════════════════════
-// RepertoireTracker: 레퍼토리 트래커
+// RepertoireTracker: 레퍼토리 트래커 (파트 상세 관리 + 날짜 추적)
 // ═══════════════════════════════════════════════════════════════════════════
 const RepertoireTracker = (() => {
   const KEY = 'rf_repertoire';
   const STATE_STYLES = {
     learning: { badge: 'bg-blue-100 text-blue-700', bar: 'bg-blue-400' },
     polishing: { badge: 'bg-amber-100 text-amber-700', bar: 'bg-amber-400' },
-    ready: { badge: 'bg-green-100 text-green-700', bar: 'bg-green-400' },
-    mastered: { badge: 'bg-purple-100 text-purple-700', bar: 'bg-purple-400' },
+    ready:     { badge: 'bg-green-100 text-green-700', bar: 'bg-green-400' },
+    mastered:  { badge: 'bg-purple-100 text-purple-700', bar: 'bg-purple-400' },
   };
   const STATE_LABELS = { learning: 'Learning', polishing: 'Polishing', ready: 'Ready', mastered: 'Mastered' };
+  const FIXED_PARTS = [
+    { id: 'intro',    label: '인트로' },
+    { id: 'mainriff', label: '메인 리프' },
+    { id: 'chorus',   label: '후렴' },
+    { id: 'bridge',   label: '브리지' },
+    { id: 'solo',     label: '솔로' },
+    { id: 'outro',    label: '아웃트로' },
+  ];
+  const LEVEL_STYLES = [
+    { label: '미시작', off: 'bg-gray-100 text-gray-400', on: 'bg-gray-400 text-white' },
+    { label: '연습중', off: 'bg-blue-50 text-blue-400',  on: 'bg-blue-500 text-white' },
+    { label: '거의됨', off: 'bg-amber-50 text-amber-500',on: 'bg-amber-400 text-white' },
+    { label: '완성',   off: 'bg-green-50 text-green-500',on: 'bg-green-500 text-white' },
+  ];
 
   function load() { try { return JSON.parse(localStorage.getItem(KEY)) || []; } catch { return []; } }
   function save(songs) {
@@ -945,10 +959,7 @@ const RepertoireTracker = (() => {
     const localSongs = load();
     const localIds = new Set(localSongs.map(s => s.id));
     const merged = [...localSongs, ...cloudSongs.filter(s => !localIds.has(s.id))];
-    if (merged.length > localSongs.length) {
-      localStorage.setItem(KEY, JSON.stringify(merged));
-      render();
-    }
+    if (merged.length > localSongs.length) { localStorage.setItem(KEY, JSON.stringify(merged)); render(); }
   }
 
   function stateFromProgress(pct) {
@@ -957,7 +968,11 @@ const RepertoireTracker = (() => {
     if (pct >= 30) return 'polishing';
     return 'learning';
   }
-
+  function calcPartsProgress(parts) {
+    if (!parts || parts.length === 0) return 0;
+    const total = parts.reduce((sum, p) => sum + (p.level || 0), 0);
+    return Math.round((total / (parts.length * 3)) * 100);
+  }
   function dday(deadline) {
     if (!deadline) return null;
     const diff = Math.ceil((new Date(deadline) - new Date()) / 86400000);
@@ -965,8 +980,12 @@ const RepertoireTracker = (() => {
     if (diff === 0) return 'D-Day!';
     return `D-${diff}`;
   }
+  function _fmtDate(iso) {
+    if (!iso) return '-';
+    return new Date(iso).toLocaleDateString('ko-KR', { year: 'numeric', month: 'short', day: 'numeric' });
+  }
 
-  // 기존 addSong 함수 전체를 교체
+  // ── 기본 CRUD ─────────────────────────────────────────────────────────────
   function addSong() {
     const title = document.getElementById('rep-title')?.value.trim();
     const artist = document.getElementById('rep-artist')?.value.trim();
@@ -974,7 +993,14 @@ const RepertoireTracker = (() => {
     const deadline = document.getElementById('rep-deadline')?.value || null;
     if (!title) { alert('곡 제목을 입력해 주세요.'); return; }
     const songs = load();
-    songs.push({ id: Date.now(), title, artist, bpm, deadline, progress: 0, state: 'learning', addedAt: new Date().toISOString() });
+    songs.push({
+      id: Date.now(), title, artist, bpm, deadline,
+      progress: 0, state: 'learning',
+      addedAt: new Date().toISOString(),
+      lastPracticedAt: null,
+      parts: [],
+      partsManual: false,
+    });
     save(songs);
     document.getElementById('rep-title').value = '';
     document.getElementById('rep-artist').value = '';
@@ -982,19 +1008,13 @@ const RepertoireTracker = (() => {
     render();
   }
 
-  function stateFromProgress(pct) {
-    if (pct >= 90) return 'mastered';
-    if (pct >= 60) return 'ready';
-    if (pct >= 30) return 'polishing';
-    return 'learning';
-  }
-
-  function setProgress(id, pct) {
+  function setProgress(id, pct, fromManual = false) {
     const songs = load();
     const s = songs.find(s => s.id === id);
     if (!s) return;
     const oldState = s.state;
     s.progress = pct;
+    if (fromManual) s.partsManual = true;
     s.state = stateFromProgress(pct);
     if (s.state === 'mastered' && !s.masteredAt) s.masteredAt = new Date().toISOString();
     save(songs);
@@ -1011,18 +1031,231 @@ const RepertoireTracker = (() => {
   }
 
   function practiceSong(id) {
-    const s = load().find(s => s.id === id);
+    const songs = load();
+    const s = songs.find(s => s.id === id);
     if (!s) return;
+    s.lastPracticedAt = new Date().toISOString();
+    save(songs);
     AppSidebar.setActive('builder');
     setTimeout(() => PracticeBuilder.addSongSession(s.title, s.bpm), 400);
   }
 
   function removeSong(id) { save(load().filter(s => s.id !== id)); render(); }
 
+  // ── 파트 관리 ─────────────────────────────────────────────────────────────
+  function addPart(songId, partId, partLabel) {
+    const songs = load();
+    const song = songs.find(s => s.id === songId);
+    if (!song) return;
+    if (!song.parts) song.parts = [];
+    if (song.parts.some(p => p.id === partId)) return;
+    song.parts.push({ id: partId, label: partLabel, level: 0, targetBpm: song.bpm || 120, currentBpm: 0 });
+    if (!song.partsManual) { song.progress = calcPartsProgress(song.parts); song.state = stateFromProgress(song.progress); }
+    save(songs);
+    openDetailModal(songId);
+    render();
+  }
+
+  function addPartCustom(songId) {
+    const label = (prompt('파트 이름을 입력하세요 (예: 간주, 솔로2...)') || '').trim();
+    if (!label) return;
+    const songs = load();
+    const song = songs.find(s => s.id === songId);
+    if (!song) return;
+    if (!song.parts) song.parts = [];
+    song.parts.push({ id: 'custom_' + Date.now(), label, level: 0, targetBpm: song.bpm || 120, currentBpm: 0 });
+    if (!song.partsManual) { song.progress = calcPartsProgress(song.parts); song.state = stateFromProgress(song.progress); }
+    save(songs);
+    openDetailModal(songId);
+    render();
+  }
+
+  function removePart(songId, partIdx) {
+    const songs = load();
+    const song = songs.find(s => s.id === songId);
+    if (!song || !song.parts) return;
+    song.parts.splice(partIdx, 1);
+    if (!song.partsManual) { song.progress = calcPartsProgress(song.parts); song.state = stateFromProgress(song.progress); }
+    save(songs);
+    openDetailModal(songId);
+    render();
+  }
+
+  function updatePart(songId, partIdx, field, value) {
+    const songs = load();
+    const song = songs.find(s => s.id === songId);
+    if (!song || !song.parts?.[partIdx]) return;
+    song.parts[partIdx][field] = value;
+    if (field === 'level' && !song.partsManual) {
+      song.progress = calcPartsProgress(song.parts);
+      song.state = stateFromProgress(song.progress);
+      save(songs);
+      openDetailModal(songId); // 레벨 변경 시만 모달 갱신
+    } else {
+      save(songs); // BPM 입력 시는 모달 유지 (포커스 유지)
+    }
+    render();
+  }
+
+  function togglePartsManual(songId) {
+    const songs = load();
+    const song = songs.find(s => s.id === songId);
+    if (!song) return;
+    song.partsManual = !song.partsManual;
+    if (!song.partsManual) {
+      song.progress = calcPartsProgress(song.parts || []);
+      song.state = stateFromProgress(song.progress);
+    }
+    save(songs);
+    openDetailModal(songId);
+    render();
+  }
+
+  // ── 상세 관리 팝업 ────────────────────────────────────────────────────────
+  function openDetailModal(songId) {
+    const existing = document.getElementById('rep-detail-modal');
+    if (existing) existing.remove();
+    const song = load().find(s => s.id === songId);
+    if (!song) return;
+
+    const parts = song.parts || [];
+    const autoProgress = parts.length > 0 && !song.partsManual;
+    const displayPct = autoProgress ? calcPartsProgress(parts) : (song.progress || 0);
+    const addedAtVal = song.addedAt ? new Date(song.addedAt).toISOString().slice(0, 10) : '';
+
+    const partsHTML = parts.map((p, i) => `
+      <div class="bg-gray-50 rounded-xl p-3 space-y-2 border border-gray-100">
+        <div class="flex items-center justify-between">
+          <span class="text-sm font-bold text-gray-700">${p.label}</span>
+          <button onclick="RepertoireTracker.removePart(${song.id}, ${i})"
+            class="text-gray-300 hover:text-red-400 text-sm transition-colors">✕</button>
+        </div>
+        <div class="flex gap-1">
+          ${LEVEL_STYLES.map((lv, li) => `
+            <button onclick="RepertoireTracker.updatePart(${song.id}, ${i}, 'level', ${li})"
+              class="flex-1 text-[10px] font-bold py-1.5 rounded-lg transition-all ${p.level === li ? lv.on : lv.off}">
+              ${lv.label}
+            </button>`).join('')}
+        </div>
+        <div class="flex gap-2">
+          <label class="flex items-center gap-1 text-xs text-gray-500 flex-1">목표 BPM
+            <input type="number" min="40" max="300" value="${p.targetBpm || ''}" placeholder="120"
+              onchange="RepertoireTracker.updatePart(${song.id}, ${i}, 'targetBpm', parseInt(this.value)||0)"
+              class="flex-1 min-w-0 border border-gray-200 rounded-lg px-2 py-1 text-xs focus:outline-none focus:border-amber-300" />
+          </label>
+          <label class="flex items-center gap-1 text-xs text-gray-500 flex-1">현재 BPM
+            <input type="number" min="40" max="300" value="${p.currentBpm || ''}" placeholder="80"
+              onchange="RepertoireTracker.updatePart(${song.id}, ${i}, 'currentBpm', parseInt(this.value)||0)"
+              class="flex-1 min-w-0 border border-gray-200 rounded-lg px-2 py-1 text-xs focus:outline-none focus:border-amber-300" />
+          </label>
+        </div>
+      </div>`).join('');
+
+    const availableFixed = FIXED_PARTS.filter(fp => !parts.some(p => p.id === fp.id));
+
+    const modal = document.createElement('div');
+    modal.id = 'rep-detail-modal';
+    modal.className = 'fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4';
+    modal.style.background = 'rgba(0,0,0,0.45)';
+    modal.innerHTML = `
+      <div class="relative bg-white rounded-2xl shadow-2xl w-full max-w-md max-h-[90vh] flex flex-col">
+        <!-- 헤더 -->
+        <div class="px-5 py-4 border-b border-gray-100 flex items-start justify-between shrink-0">
+          <div>
+            <p class="font-black text-gray-800 text-base leading-tight">${song.title}</p>
+            ${song.artist ? `<p class="text-xs text-gray-400 mt-0.5">${song.artist}</p>` : ''}
+          </div>
+          <button onclick="document.getElementById('rep-detail-modal').remove()"
+            class="shrink-0 w-8 h-8 flex items-center justify-center rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-500 font-bold ml-3 transition-colors">✕</button>
+        </div>
+
+        <!-- 스크롤 영역 -->
+        <div class="overflow-y-auto p-5 space-y-5">
+
+          <!-- 날짜 정보 -->
+          <div class="bg-gray-50 rounded-xl p-4 space-y-2.5">
+            <p class="text-xs font-black text-gray-500">📅 날짜 정보</p>
+            <div class="flex items-center gap-3 text-xs">
+              <span class="text-gray-400 w-16 shrink-0">최초 등록일</span>
+              <input type="date" value="${addedAtVal}"
+                onchange="RepertoireTracker.setField(${song.id}, 'addedAt', this.value ? new Date(this.value + 'T00:00:00').toISOString() : null)"
+                class="flex-1 border border-gray-200 rounded-lg px-2 py-1.5 focus:outline-none focus:border-amber-300 text-xs" />
+            </div>
+            <div class="flex items-center gap-3 text-xs">
+              <span class="text-gray-400 w-16 shrink-0">최근 연습일</span>
+              <span class="font-medium text-gray-700">${_fmtDate(song.lastPracticedAt)}</span>
+            </div>
+          </div>
+
+          <!-- 전체 완성도 -->
+          <div class="space-y-2">
+            <div class="flex items-center justify-between">
+              <p class="text-xs font-black text-gray-500">🎯 전체 완성도</p>
+              <div class="flex items-center gap-2">
+                ${parts.length > 0 ? `
+                <button onclick="RepertoireTracker.togglePartsManual(${song.id})"
+                  class="text-[10px] px-2 py-0.5 rounded-lg border font-bold transition-colors
+                    ${autoProgress ? 'border-amber-300 text-amber-600 bg-amber-50' : 'border-gray-200 text-gray-400 hover:bg-gray-50'}">
+                  ${autoProgress ? '자동 계산 중' : '직접 조정 중'}
+                </button>` : ''}
+                <span class="text-sm font-black text-gray-800">${displayPct}%</span>
+              </div>
+            </div>
+            <input type="range" min="0" max="100" value="${displayPct}"
+              ${autoProgress ? 'disabled' : ''}
+              onchange="RepertoireTracker.setProgress(${song.id}, parseInt(this.value), true)"
+              class="w-full h-2 accent-amber-500 ${autoProgress ? 'opacity-30 cursor-not-allowed' : 'cursor-pointer'}" />
+            <div class="w-full bg-gray-100 rounded-full h-2">
+              <div class="${STATE_STYLES[song.state]?.bar || 'bg-amber-400'} h-2 rounded-full transition-all" style="width:${displayPct}%"></div>
+            </div>
+            ${parts.length > 0 && autoProgress ? `<p class="text-[10px] text-amber-500">파트 완성도를 기반으로 자동 계산됩니다. "직접 조정 중"으로 바꾸면 수동 조정 가능합니다.</p>` : ''}
+          </div>
+
+          <!-- 파트 목록 -->
+          <div class="space-y-3">
+            <p class="text-xs font-black text-gray-500">🎸 파트 관리</p>
+            ${parts.length > 0
+              ? `<div class="space-y-2">${partsHTML}</div>`
+              : `<p class="text-xs text-gray-300 text-center py-3">파트를 추가하면 각 파트별로 완성도를 관리할 수 있어요</p>`}
+
+            <!-- 파트 추가 버튼들 -->
+            <div>
+              <p class="text-[10px] text-gray-400 mb-1.5">파트 추가</p>
+              <div class="flex flex-wrap gap-1.5">
+                ${availableFixed.map(fp => `
+                  <button onclick="RepertoireTracker.addPart(${song.id}, '${fp.id}', '${fp.label}')"
+                    class="text-xs px-3 py-1.5 bg-gray-50 hover:bg-amber-50 hover:text-amber-600 text-gray-600
+                      font-medium rounded-xl border border-gray-200 transition-colors">
+                    ${fp.label}</button>`).join('')}
+                <button onclick="RepertoireTracker.addPartCustom(${song.id})"
+                  class="text-xs px-3 py-1.5 bg-amber-50 hover:bg-amber-100 text-amber-600 font-bold rounded-xl border border-amber-200 transition-colors">
+                  + 직접 추가</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- D-Day & 마감일 -->
+          <div class="bg-gray-50 rounded-xl p-3">
+            <p class="text-xs font-black text-gray-500 mb-2">⏰ 마감일</p>
+            <input type="date" value="${song.deadline || ''}"
+              onchange="RepertoireTracker.setField(${song.id},'deadline',this.value||null); RepertoireTracker.render()"
+              class="w-full border border-gray-200 rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:border-amber-300" />
+          </div>
+
+        </div>
+      </div>`;
+    modal.addEventListener('click', e => { if (e.target === modal) modal.remove(); });
+    document.body.appendChild(modal);
+  }
+
+  // ── 카드 렌더링 ───────────────────────────────────────────────────────────
   function songCard(song) {
     const sty = STATE_STYLES[song.state] || STATE_STYLES.learning;
     const pct = song.progress || 0;
     const dd = dday(song.deadline);
+    const hasParts = (song.parts || []).length > 0;
+    const donePartsCount = hasParts ? (song.parts || []).filter(p => p.level === 3).length : 0;
+
     return `
       <div class="bg-white rounded-xl border border-gray-200 shadow-sm p-3 space-y-2">
         <div class="flex items-start justify-between gap-2">
@@ -1033,40 +1266,52 @@ const RepertoireTracker = (() => {
           <div class="flex items-center gap-1 shrink-0">
             ${dd ? `<span class="text-xs font-bold px-1.5 py-0.5 bg-red-50 text-red-500 rounded-lg">${dd}</span>` : ''}
             <span class="text-xs px-2 py-0.5 rounded-full font-bold ${sty.badge}">${STATE_LABELS[song.state]}</span>
-            <button onclick="RepertoireTracker.removeSong(${song.id})" class="text-gray-300 hover:text-red-400 text-xs ml-1">✕</button>
+            <button onclick="RepertoireTracker.removeSong(${song.id})" class="text-gray-300 hover:text-red-400 text-xs ml-1 transition-colors">✕</button>
           </div>
         </div>
-        <!-- 진행률 슬라이더 -->
+
+        <!-- 날짜 정보 -->
+        <div class="flex gap-3 text-[10px] text-gray-400">
+          <span>📅 ${song.addedAt ? new Date(song.addedAt).toLocaleDateString('ko-KR', { month: 'short', day: 'numeric' }) : '-'} 등록</span>
+          <span>🎸 최근 ${song.lastPracticedAt ? new Date(song.lastPracticedAt).toLocaleDateString('ko-KR', { month: 'short', day: 'numeric' }) : '없음'}</span>
+          ${hasParts ? `<span>파트 ${donePartsCount}/${(song.parts||[]).length} 완성</span>` : ''}
+        </div>
+
+        <!-- 완성도 바 -->
         <div class="space-y-1">
           <div class="flex justify-between text-xs text-gray-400">
-            <span>완성도</span><span class="font-bold text-gray-700">${pct}%</span>
+            <span>완성도${hasParts && !song.partsManual ? ' <span class="text-amber-500 text-[10px]">자동</span>' : ''}</span>
+            <span class="font-bold text-gray-700">${pct}%</span>
           </div>
+          ${!hasParts || song.partsManual ? `
           <input type="range" min="0" max="100" value="${pct}"
-            oninput="this.nextElementSibling.querySelector('span').textContent=this.value+'%'"
             onchange="RepertoireTracker.setProgress(${song.id}, parseInt(this.value))"
-            class="w-full h-2 accent-amber-500 cursor-pointer" />
-          <div class="w-full bg-gray-100 rounded-full h-1.5 mt-0.5">
-            <div class="${sty.bar} h-1.5 rounded-full" style="width:${pct}%"></div>
+            class="w-full h-2 accent-amber-500 cursor-pointer" />` : ''}
+          <div class="w-full bg-gray-100 rounded-full h-1.5">
+            <div class="${sty.bar} h-1.5 rounded-full transition-all" style="width:${pct}%"></div>
           </div>
-          <div class="hidden"><span></span></div>
         </div>
-        <!-- BPM & 마감일 -->
+
+        ${!hasParts ? `
         <div class="flex gap-2 flex-wrap text-xs">
           <label class="flex items-center gap-1 text-gray-500">BPM:
             <input type="number" min="40" max="300" value="${song.bpm || ''}" placeholder="120"
               onchange="RepertoireTracker.setField(${song.id},'bpm',parseInt(this.value)||0)"
               class="w-16 border border-gray-200 rounded px-1 py-0.5 text-xs focus:outline-none focus:border-amber-300" />
           </label>
-          <label class="flex items-center gap-1 text-gray-500">D-Day:
-            <input type="date" value="${song.deadline || ''}"
-              onchange="RepertoireTracker.setField(${song.id},'deadline',this.value||null); RepertoireTracker.render()"
-              class="border border-gray-200 rounded px-1 py-0.5 text-xs focus:outline-none focus:border-amber-300" />
-          </label>
+        </div>` : ''}
+
+        <!-- 버튼 -->
+        <div class="flex gap-2">
+          <button onclick="RepertoireTracker.practiceSong(${song.id})"
+            class="flex-1 text-xs py-1.5 bg-amber-500 hover:bg-amber-600 text-white font-bold rounded-lg transition-colors">
+            🎸 연습하기
+          </button>
+          <button onclick="RepertoireTracker.openDetailModal(${song.id})"
+            class="text-xs px-3 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-600 font-bold rounded-lg transition-colors">
+            상세 관리
+          </button>
         </div>
-        <button onclick="RepertoireTracker.practiceSong(${song.id})"
-          class="w-full text-xs py-1.5 bg-amber-500 hover:bg-amber-600 text-white font-bold rounded-lg transition-colors">
-          🎸 이 곡 연습하기
-        </button>
       </div>`;
   }
 
@@ -1078,31 +1323,32 @@ const RepertoireTracker = (() => {
     const mastered = songs.filter(s => s.state === 'mastered');
 
     board.innerHTML = `
-      <!-- 진행 중인 곡 -->
       <div class="mb-6">
         <div class="flex items-center gap-2 mb-3">
           <h3 class="text-sm font-black text-gray-700">🎯 진행 중인 곡</h3>
           <span class="text-xs bg-blue-100 text-blue-700 font-bold px-2 py-0.5 rounded-full">${inProgress.length}곡</span>
         </div>
         ${inProgress.length
-        ? `<div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3">${inProgress.map(songCard).join('')}</div>`
-        : `<p class="text-sm text-gray-300 py-6 text-center">등록된 곡이 없습니다</p>`}
+          ? `<div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3">${inProgress.map(songCard).join('')}</div>`
+          : `<p class="text-sm text-gray-300 py-6 text-center">등록된 곡이 없습니다</p>`}
       </div>
-      <!-- 완료 곡 -->
       <div>
         <div class="flex items-center gap-2 mb-3">
           <h3 class="text-sm font-black text-gray-700">🏆 완료 곡 (Mastered)</h3>
           <span class="text-xs bg-purple-100 text-purple-700 font-bold px-2 py-0.5 rounded-full">${mastered.length}곡</span>
         </div>
         ${mastered.length
-        ? `<div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3">${mastered.map(songCard).join('')}</div>`
-        : `<p class="text-sm text-gray-300 py-4 text-center">완성된 곡을 여기서 확인하세요</p>`}
+          ? `<div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3">${mastered.map(songCard).join('')}</div>`
+          : `<p class="text-sm text-gray-300 py-4 text-center">완성된 곡을 여기서 확인하세요</p>`}
       </div>`;
   }
 
-  return { addSong, setProgress, setField, removeSong, practiceSong, render, syncFromCloud };
-
+  return {
+    addSong, setProgress, setField, removeSong, practiceSong, render, syncFromCloud,
+    openDetailModal, addPart, addPartCustom, removePart, updatePart, togglePartsManual,
+  };
 })();
+
 // ═══════════════════════════════════════════════════════════════════════════
 // ChallengeTracker: 주간 챌린지 진행률 추적
 // ═══════════════════════════════════════════════════════════════════════════
