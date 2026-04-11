@@ -1387,8 +1387,16 @@
             <div id="virtual-guitar-collection" class="grid grid-cols-3 md:grid-cols-4 gap-3"></div>
           </div>
 
-        </section>
+          <!-- 로그아웃 -->
+          <div class="mt-8 text-center">
+            <button onclick="AppState.logout()"
+              class="px-6 py-2.5 rounded-2xl border border-gray-200 text-gray-400 text-sm font-bold hover:bg-red-50 hover:border-red-200 hover:text-red-400 transition-all">
+              🚪 로그아웃
+            </button>
+            <p class="text-[10px] text-gray-300 mt-2">서버 데이터는 유지되며, 재로그인 시 복원됩니다.</p>
+          </div>
 
+        </section>
 
         <!-- ══════════════════════════════════════════════
            7. 참고 자료 (틀)
