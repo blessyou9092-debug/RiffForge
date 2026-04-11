@@ -404,28 +404,30 @@ const AppState = (() => {
 
   // 인사말 렌더링
   function renderGreeting() {
+    const name = Storage.get(CONFIG.KEYS.USERNAME, '');
+    const el = document.getElementById('dash-greeting');
+    const hdr = document.getElementById('hdr-greeting');
 
-  const name = Storage.get(CONFIG.KEYS.USERNAME, '');
-  const el = document.getElementById('dash-greeting');
-  const hdr = document.getElementById('hdr-greeting');
-
-  if (!name) {
-    // 이름 미입력: 클릭 유도 문구
-    if (el) {
-      el.innerHTML = `<span
-        onclick="AppState.editUsername()"
-        style="cursor:pointer;text-decoration:underline dotted;text-underline-offset:4px;opacity:0.75;"
-        title="클릭해서 이름 입력">기타리스트님, 이름을 입력해서 연습 일지를 시작해보세요 👆</span>`;
+    if (!name) {
+      if (el) {
+        const span = document.createElement('span');
+        span.onclick = function() { AppState.editUsername(); };
+        span.style.cssText = 'cursor:pointer;text-decoration:underline dotted;text-underline-offset:4px;opacity:0.75;';
+        span.title = '클릭해서 이름 입력';
+        span.textContent = '기타리스트님, 이름을 입력해서 연습 일지를 시작해보세요 👆';
+        el.innerHTML = '';
+        el.appendChild(span);
+      }
+      if (hdr) hdr.textContent = '기타리스트님';
+      return;
     }
-    if (hdr) hdr.textContent = '기타리스트님';
-    return;
+
+    const h = new Date().getHours();
+    const greeting = h < 11 ? '좋은 아침입니다' : h < 18 ? '좋은 오후입니다' : '좋은 저녁입니다';
+    if (el) el.textContent = name + '님, ' + greeting + '! 🎸';
+    if (hdr) hdr.textContent = name + '님';
   }
 
-  const h = new Date().getHours();
-  const greeting = h < 11 ? '좋은 아침입니다' : h < 18 ? '좋은 오후입니다' : '좋은 저녁입니다';
-  if (el) el.textContent = `${name}님, ${greeting}! 🎸`;
-  if (hdr) hdr.textContent = name + '님';
-}
 
   function renderStats() {
     const tm = formatMin(totalMin);
@@ -3119,18 +3121,23 @@ const CrewBoard = (() => {
     }).join('');
     // 더보기 버튼 (postsOverride 없을 때만 표시)
     if (!postsOverride) {
+      const moreWrap = document.createElement('div');
+      moreWrap.style.cssText = 'text-align:center;margin-top:12px;padding-bottom:8px;';
       if (_hasMore) {
-        feed.innerHTML += `
-          <div class="text-center mt-3 pb-2">
-            <button id="board-load-more-btn" onclick="CrewBoard.loadMore()"
-              class="px-5 py-2 rounded-xl bg-gray-100 text-gray-500 text-sm font-bold hover:bg-amber-50 hover:text-amber-600 transition-colors">
-              이전 글 더보기
-            </button>
-          </div>`;
+        const btn = document.createElement('button');
+        btn.id = 'board-load-more-btn';
+        btn.onclick = function() { CrewBoard.loadMore(); };
+        btn.className = 'px-5 py-2 rounded-xl bg-gray-100 text-gray-500 text-sm font-bold hover:bg-amber-50 hover:text-amber-600 transition-colors';
+        btn.textContent = '이전 글 더보기';
+        moreWrap.appendChild(btn);
       } else if (_olderPosts.length > 0) {
-        feed.innerHTML += `<p class="text-center text-xs text-gray-300 mt-3 pb-2">모든 글을 불러왔습니다</p>`;
+        moreWrap.style.fontSize = '11px';
+        moreWrap.style.color = '#d1d5db';
+        moreWrap.textContent = '모든 글을 불러왔습니다';
       }
+      feed.appendChild(moreWrap);
     }
+
   // ── 최초 로드 ────────────────────────────────────────────────────────────
   async function init() {
     render(_getLocal());
