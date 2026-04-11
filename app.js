@@ -3175,7 +3175,7 @@ const CrewBoard = (() => {
     deleteComment, startEditComment, saveEditComment, cancelEditComment,
     previewPractice,
   };
-})();
+
 // ═══════════════════════════════════════════════════════════════════════════
 // DOMContentLoaded: 앱 초기화
 // ═══════════════════════════════════════════════════════════════════════════
