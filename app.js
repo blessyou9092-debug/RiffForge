@@ -2709,7 +2709,11 @@ const CrewBoard = (() => {
 
 
   let _unsubscribeBoard = null; // 실시간 구독 해제 함수
-
+  let _topPosts = [];       // 실시간 구독 최신 10개
+  let _olderPosts = [];     // 더보기로 로드된 이전 글
+  let _lastDoc = null;      // 페이지네이션 커서
+  let _hasMore = true;
+  let _loadingMore = false;
   async function _fetchPosts() {
     try {
       return await FireDB.fetchPosts();
@@ -3026,7 +3030,8 @@ const CrewBoard = (() => {
 
     const myId = AppState.getUserId();
     const myName = Storage.get(CONFIG.KEYS.USERNAME, '').trim();
-    const raw = postsOverride || _getLocal();
+    const combined = [..._topPosts, ..._olderPosts.filter(p => !_topPosts.some(t => t.id === p.id))];
+    const raw = postsOverride || (combined.length ? combined : _getLocal());
     const posts = _sorted(raw.filter(p => p.id && p.id !== 'init' && Array.isArray(p.likes)));
 
     if (posts.length === 0) {
@@ -3112,19 +3117,51 @@ const CrewBoard = (() => {
           </div>
         </div>`;
     }).join('');
-  }
-
+    // 더보기 버튼 (postsOverride 없을 때만 표시)
+    if (!postsOverride) {
+      if (_hasMore) {
+        feed.innerHTML += `
+          <div class="text-center mt-3 pb-2">
+            <button id="board-load-more-btn" onclick="CrewBoard.loadMore()"
+              class="px-5 py-2 rounded-xl bg-gray-100 text-gray-500 text-sm font-bold hover:bg-amber-50 hover:text-amber-600 transition-colors">
+              이전 글 더보기
+            </button>
+          </div>`;
+      } else if (_olderPosts.length > 0) {
+        feed.innerHTML += `<p class="text-center text-xs text-gray-300 mt-3 pb-2">모든 글을 불러왔습니다</p>`;
+      }
+    }
   // ── 최초 로드 ────────────────────────────────────────────────────────────
   async function init() {
-    render(_getLocal()); // 로컬 캐시 즉시 렌더
+    render(_getLocal());
     FireDB.onReady(() => {
-      // 실시간 구독 시작 (30초 폴링 완전 대체)
-      _unsubscribeBoard = FireDB.subscribeBoard(posts => {
-        _setLocal(posts);
-        render(posts);
+      _unsubscribeBoard = FireDB.subscribeBoard((posts, lastDoc) => {
+        _topPosts = posts;
+        if (_olderPosts.length === 0) _lastDoc = lastDoc; // 첫 로드 시만 커서 업데이트
+        _setLocal([..._topPosts, ..._olderPosts]);
+        render();
       });
     });
   }
+  async function loadMore() {
+    if (_loadingMore || !_hasMore || !_lastDoc) return;
+    _loadingMore = true;
+    const btn = document.getElementById('board-load-more-btn');
+    if (btn) { btn.textContent = '불러오는 중...'; btn.disabled = true; }
+
+    const result = await FireDB.fetchPostsPage(_lastDoc, 10);
+
+    // 중복 제거
+    const existingIds = new Set([..._topPosts, ..._olderPosts].map(p => p.id));
+    _olderPosts = [..._olderPosts, ...result.posts.filter(p => !existingIds.has(p.id))];
+    _lastDoc = result.lastDoc;
+    _hasMore = result.hasMore;
+    _loadingMore = false;
+
+    _setLocal([..._topPosts, ..._olderPosts]);
+    render();
+  }
+
 
   // ── 30초마다 자동 폴링 ───────────────────────────────────────────────────
   function startPolling() {
@@ -3132,7 +3169,7 @@ const CrewBoard = (() => {
   }
 
   return {
-    init, render, refreshMyInfo, startPolling,
+    init, render, refreshMyInfo, startPolling, loadMore,
     addPost, toggleLike, addComment, quickReact,
     setSortMode, deletePost, startEdit, saveEdit, cancelEdit,
     deleteComment, startEditComment, saveEditComment, cancelEditComment,
