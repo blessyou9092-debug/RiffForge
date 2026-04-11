@@ -990,11 +990,27 @@ const RepertoireTracker = (() => {
   async function syncFromCloud() {
     if (typeof FireDB === 'undefined' || !FireDB.getUsername()) return;
     const cloudSongs = await FireDB.loadRepertoire();
-    if (!cloudSongs) return;
+    if (!cloudSongs || !cloudSongs.length) return;
     const localSongs = load();
-    const localIds = new Set(localSongs.map(s => s.id));
-    const merged = [...localSongs, ...cloudSongs.filter(s => !localIds.has(s.id))];
-    if (merged.length > localSongs.length) { localStorage.setItem(KEY, JSON.stringify(merged)); render(); }
+
+    const localMap = new Map(localSongs.map(s => [String(s.id), s]));
+    const cloudMap = new Map(cloudSongs.map(s => [String(s.id), s]));
+    const allIds = new Set([...localMap.keys(), ...cloudMap.keys()]);
+
+    const merged = [];
+    allIds.forEach(id => {
+      const lo = localMap.get(id);
+      const cl = cloudMap.get(id);
+      if (!lo) { merged.push(cl); return; }   // 로컬에 없으면 클라우드 사용
+      if (!cl) { merged.push(lo); return; }   // 클라우드에 없으면 로컬 사용
+      // 양쪽 존재: parts는 더 많은 쪽 우선, 나머지 필드는 로컬 우선
+      const useParts = (cl.parts?.length || 0) > (lo.parts?.length || 0)
+        ? cl.parts : (lo.parts || []);
+      merged.push({ ...cl, ...lo, parts: useParts });
+    });
+
+    localStorage.setItem(KEY, JSON.stringify(merged));
+    render();
   }
 
   function stateFromProgress(pct) {
