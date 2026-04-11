@@ -369,7 +369,7 @@ const AppState = (() => {
       const val = weeklyMin[i] || 0;
       const pct = Math.round((val / max) * 100);
       return `<div class="flex flex-col items-center gap-1 flex-1">
-        <div class="w-full flex items-end justify-center" style="height:60px">
+        <div class="w-full flex items-end justify-center" style="height:80px">
           <div class="w-full max-w-[28px] rounded-t-lg ${i === tod ? 'bg-gradient-to-t from-amber-500 to-orange-400' : 'bg-amber-200'}"
             style="height:${Math.max(pct, 4)}%" title="${val}분"></div>
         </div>
