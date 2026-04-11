@@ -3188,15 +3188,15 @@ function showGuidePopup() {
       <div class="space-y-4 text-sm text-gray-600">
         <div>
           <p class="font-black text-gray-800 mb-0.5">① 이름 등록</p>
-          <p>대시보드 상단 인사말 클릭 → 이름 입력. 내 기록이 서버에 저장됩니다.</p>
+          <p>대시보드 상단 인사말 클릭 → 이름 입력. 내 연습 기록이 서버에 저장됩니다.</p>
         </div>
         <div>
           <p class="font-black text-gray-800 mb-0.5">② 연습일지 쓰기 ← 핵심!</p>
-          <p><b>연습일지</b> → 세션 추가(워밍업/이론/실전) → 분 입력 → 저장. 저장할 때마다 XP와 물주기가 쌓입니다.</p>
+          <p><b>연습일지</b> → 세션 추가(워밍업/이론/실전) → 분 입력 → 저장. 저장할 때마다 XP와 물주기가 쌓입니다. </p>
         </div>
         <div>
           <p class="font-black text-gray-800 mb-0.5">③ 연습곡 관리</p>
-          <p><b>연습곡 관리</b> → 곡 추가 → 슬라이더로 완성도 조절. Learning → Mastered 단계로 성장을 추적합니다.</p>
+          <p><b>연습곡 관리</b> → 곡 추가 → 슬라이더로 완성도 조절.<p> 1) 연습곡을 추가해서 "연습하기"버튼으로 연습 일지와 연계하고,<p> 2) 포모도로 타이머에서 연동 하고 백킹트랙과 함께 연습해보세요. </p>
         </div>
         <div>
           <p class="font-black text-gray-800 mb-0.5">④ 나무 키우기</p>
@@ -3204,11 +3204,11 @@ function showGuidePopup() {
         </div>
         <div>
           <p class="font-black text-gray-800 mb-0.5">⑤ 스튜디오</p>
-          <p><b>메트로놈 & 백킹</b>에서 박자 + 코드 반주를 함께 틀 수 있습니다.</p>
+          <p><b>메트로놈 & 백킹</b>에서 박자 + 코드 반주를 함께 틀 수 있습니다. </p>
         </div>
         <div>
           <p class="font-black text-gray-800 mb-0.5">⑥ 주간 챌린지</p>
-          <p>대시보드에 매주 챌린지 3개. 달성하면 즉시 XP 보상 + 🎉</p>
+          <p>대시보드에 매주 챌린지 3개. 달성하면 즉시 XP 보상 🎉</p>
         </div>
         <div class="bg-amber-50 rounded-xl px-3 py-2 text-xs text-amber-700">
           💡 <b>달력</b>에서 지난 연습 확인·수정·삭제<br>
