@@ -118,6 +118,18 @@ const AppState = (() => {
         await Storage.syncLogsFromCloud();
         streak = recalcStreak();
         Storage.set(CONFIG.KEYS.STREAK, streak);
+        // 시즌 통계 역산 (클라우드 로그 동기화 후 최초 1회)
+        if (seasonXp === 0 && seasonMin === 0) {
+          const { calcXp, calcWater, calcMin } = recalcSeasonStats();
+          if (calcMin > 0) {
+            seasonXp = calcXp; seasonWater = calcWater; seasonMin = calcMin;
+            Storage.set('rf_season_xp', seasonXp);
+            Storage.set('rf_season_water', seasonWater);
+            Storage.set('rf_season_min', seasonMin);
+          }
+        }
+        // 랭킹 doc 자동 등록/갱신 (앱 로드마다)
+        await updateRanking();
         CalendarView?.render();
         await RepertoireTracker?.syncFromCloud();
         CrewRanking?.render();
@@ -224,6 +236,28 @@ const AppState = (() => {
       Storage.set('rf_season_badges', earned);
       setTimeout(() => showToast(`🎉 시즌 종료! ${myRank}위 → ${badge.emoji} ${badge.label} 획득!`, 'success'), 1500);
     } catch (e) { console.warn('[Season] 보상 처리 실패:', e); }
+  }
+
+    function recalcSeasonStats() {
+    const { start } = getSeasonInfo();
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const xpDates = Storage.get('rf_xp_dates', []);
+    let calcXp = 0, calcWater = 0, calcMin = 0;
+    const d = new Date(start);
+    while (d <= today) {
+      const ds = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+      const log = Storage.getLog(ds);
+      if (log && (log.totalMin || 0) > 0) {
+        calcMin += log.totalMin;
+        if (xpDates.includes(ds)) {
+          calcXp += log.totalMin >= 30 ? (CONFIG.XP.PRACTICE_LONG || 40) : (CONFIG.XP.PRACTICE_SHORT || 10);
+          if (log.totalMin >= 30) calcWater++;
+        }
+      }
+      d.setDate(d.getDate() + 1);
+    }
+    return { calcXp, calcWater, calcMin };
   }
 
   async function updateRanking() {
