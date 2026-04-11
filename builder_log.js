@@ -1041,6 +1041,34 @@ const RepertoireTracker = (() => {
   }
 
   function removeSong(id) { save(load().filter(s => s.id !== id)); render(); }
+    function linkPreset(songId) {
+    const presetId = document.getElementById(`rep-preset-link-${songId}`)?.value;
+    if (!presetId) { showToast('프리셋을 선택해주세요', 'warning'); return; }
+    const songs = load();
+    const song = songs.find(s => s.id === songId);
+    if (!song) return;
+    song.linkedPresetId = parseInt(presetId);
+    save(songs);
+    openDetailModal(songId);
+  }
+
+  function unlinkPreset(songId) {
+    const songs = load();
+    const song = songs.find(s => s.id === songId);
+    if (!song) return;
+    song.linkedPresetId = null;
+    save(songs);
+    openDetailModal(songId);
+  }
+
+  function openLinkedPreset(songId) {
+    const song = load().find(s => s.id === songId);
+    if (!song?.linkedPresetId) return;
+    document.getElementById('rep-detail-modal')?.remove();
+    AppSidebar.setActive('studio');
+    setTimeout(() => StudioUI?.loadUserPreset(song.linkedPresetId), 400);
+  }
+
 
   // ── 파트 관리 ─────────────────────────────────────────────────────────────
   function addPart(songId, partId, partLabel) {
@@ -1186,6 +1214,37 @@ const RepertoireTracker = (() => {
               <span class="font-medium text-gray-700">${_fmtDate(song.lastPracticedAt)}</span>
             </div>
           </div>
+        <!-- 백킹 프리셋 연결 -->
+        <div class="bg-gray-50 rounded-xl p-3 space-y-2">
+          <p class="text-xs font-black text-gray-500">🎵 백킹 프리셋 연결</p>
+          ${(() => {
+            let presets = [];
+            try { presets = JSON.parse(localStorage.getItem('rf_user_presets') || '[]'); } catch {}
+            if (!presets.length) return `<p class="text-xs text-gray-300">저장된 프리셋이 없어요. 스튜디오에서 프리셋을 먼저 저장해주세요.</p>`;
+            const linked = presets.find(p => p.id == song.linkedPresetId);
+            if (linked) {
+              return `<div class="flex items-center justify-between">
+                <span class="text-xs font-bold text-amber-700">⭐ ${linked.name}</span>
+                <div class="flex gap-1.5">
+                  <button onclick="RepertoireTracker.openLinkedPreset(${song.id})"
+                    class="text-xs px-2.5 py-1 bg-amber-500 hover:bg-amber-600 text-white font-bold rounded-lg transition-colors">스튜디오로</button>
+                  <button onclick="RepertoireTracker.unlinkPreset(${song.id})"
+                    class="text-xs px-2.5 py-1 bg-gray-100 hover:bg-gray-200 text-gray-500 font-bold rounded-lg transition-colors">해제</button>
+                </div>
+              </div>`;
+            }
+            const opts = `<option value="">프리셋 선택...</option>` +
+              presets.map(p => `<option value="${p.id}">⭐ ${p.name}</option>`).join('');
+            return `<div class="flex gap-2">
+              <select id="rep-preset-link-${song.id}"
+                class="flex-1 border border-gray-200 rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:border-amber-300">
+                ${opts}
+              </select>
+              <button onclick="RepertoireTracker.linkPreset(${song.id})"
+                class="shrink-0 text-xs px-3 py-1.5 bg-amber-100 hover:bg-amber-200 text-amber-700 font-bold rounded-lg transition-colors">연결</button>
+            </div>`;
+          })()}
+        </div>
 
           <!-- 전체 완성도 -->
           <div class="space-y-2">
@@ -1346,6 +1405,8 @@ const RepertoireTracker = (() => {
   return {
     addSong, setProgress, setField, removeSong, practiceSong, render, syncFromCloud,
     openDetailModal, addPart, addPartCustom, removePart, updatePart, togglePartsManual,
+    linkPreset, unlinkPreset, openLinkedPreset,
+
   };
 })();
 
