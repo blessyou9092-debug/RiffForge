@@ -465,17 +465,18 @@ const CONFIG = {
 
   // ── 주간 챌린지 템플릿 ──────────────────────────────────────────
   WEEKLY_CHALLENGES: [
-    { id: 'practice_5days', title: '꾸준함의 힘', desc: '이번 주 연습 일지를 5일 이상 기록하기', icon: '📅', goal: 5, unit: '일', page: 'builder' },
-    { id: 'total_120min', title: '120분의 여정', desc: '하루에 몰아서든 나눠서든, 주간 총 연습 120분 채우기', icon: '⏱', goal: 120, unit: '분', page: 'builder' },
-    { id: 'water_3times', title: '나무 지킴이', desc: '30분 이상 집중 연습으로 나무에 물 3번 주기', icon: '💧', goal: 3, unit: '회', page: 'builder' },
-    { id: 'theory_2days', title: '코드/이론의 지배자', desc: '코드·이론 세션을 포함해 2일 이상 연습하기', icon: '🎼', goal: 2, unit: '일', page: 'builder' },
-    { id: 'warmup_3', title: '준비운동은 필수', desc: '워밍업 세션을 주 3회 이상 완료하기', icon: '🔥', goal: 3, unit: '회', page: 'builder' },
-    { id: 'perfect_set', title: '완벽한 3세트', desc: '워밍업 + 이론 + 실전, 세 종류 모두 완료한 날 만들기', icon: '✨', goal: 1, unit: '일', page: 'builder' },
-    { id: 'speed_builder_2', title: '보이지 않는 손', desc: '스피드 빌더를 이번 주 2회 이상 사용하기', icon: '⚡', goal: 2, unit: '회', page: 'studio' },
-    { id: 'pomo_5sessions', title: '완전 몰입', desc: '포모도로 집중 세션을 5회 완료하기', icon: '🍅', goal: 5, unit: '세션', page: 'pomo' },
-    { id: 'rep_add_1', title: '레퍼토리 확장', desc: '레퍼토리 트래커에 새 연습 곡 1곡 이상 추가하기', icon: '🎵', goal: 1, unit: '곡', page: 'repertoire' },
-    { id: 'rep_level_up', title: '한 단계 레벨 업!', desc: '레퍼토리 곡의 단계를 1회 이상 올리기 (Learning→Polishing 등)', icon: '🚀', goal: 1, unit: '회', page: 'repertoire' },
+    { id: 'practice_5days', title: '꾸준함의 힘', desc: '이번 주 연습 일지를 5일 이상 기록하기', icon: '📅', goal: 5, unit: '일', page: 'builder', xpReward: 150 },
+    { id: 'total_120min', title: '120분의 여정', desc: '하루에 몰아서든 나눠서든, 주간 총 연습 120분 채우기', icon: '⏱', goal: 120, unit: '분', page: 'builder', xpReward: 100 },
+    { id: 'water_3times', title: '나무 지킴이', desc: '30분 이상 집중 연습으로 나무에 물 3번 주기', icon: '💧', goal: 3, unit: '회', page: 'builder', xpReward: 80 },
+    { id: 'theory_2days', title: '코드/이론의 지배자', desc: '코드·이론 세션을 포함해 2일 이상 연습하기', icon: '🎼', goal: 2, unit: '일', page: 'builder', xpReward: 80 },
+    { id: 'warmup_3', title: '준비운동은 필수', desc: '워밍업 세션을 주 3회 이상 완료하기', icon: '🔥', goal: 3, unit: '회', page: 'builder', xpReward: 60 },
+    { id: 'perfect_set', title: '완벽한 3세트', desc: '워밍업 + 이론 + 실전, 세 종류 모두 완료한 날 만들기', icon: '✨', goal: 1, unit: '일', page: 'builder', xpReward: 120 },
+    { id: 'speed_builder_2', title: '보이지 않는 손', desc: '스피드 빌더를 이번 주 2회 이상 사용하기', icon: '⚡', goal: 2, unit: '회', page: 'studio', xpReward: 70 },
+    { id: 'pomo_5sessions', title: '완전 몰입', desc: '포모도로 집중 세션을 5회 완료하기', icon: '🍅', goal: 5, unit: '세션', page: 'pomo', xpReward: 100 },
+    { id: 'rep_add_1', title: '레퍼토리 확장', desc: '레퍼토리 트래커에 새 연습 곡 1곡 이상 추가하기', icon: '🎵', goal: 1, unit: '곡', page: 'repertoire', xpReward: 50 },
+    { id: 'rep_level_up', title: '한 단계 레벨 업!', desc: '레퍼토리 곡의 단계를 1회 이상 올리기 (Learning→Polishing 등)', icon: '🚀', goal: 1, unit: '회', page: 'repertoire', xpReward: 60 },
   ],
+
 
 
   // ── 크루 시즌 랭킹 설정 ───────────────────────────────────────────
