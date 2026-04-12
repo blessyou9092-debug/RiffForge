@@ -289,7 +289,9 @@ const PracticeBuilder = (() => {
     // 스트릭 업데이트
     AppState.updateStreak(editingDate);
     AppState.saveAll();
-    AppState.updateRanking().catch(e => console.warn('[Ranking] 업데이트 실패:', e));
+    AppState.updateRanking()
+  .then(() => { CrewRanking?._invalidateCache?.(); CrewRanking?.render(); })
+  .catch(e => console.warn('[Ranking] 업데이트 실패:', e));
     if (typeof ChallengeTracker !== 'undefined') ChallengeTracker.recalc();
     AppState.renderDashboard();
     CalendarView.render();
@@ -1690,13 +1692,15 @@ const CrewRanking = (() => {
   const MEDALS = ['🥇', '🥈', '🥉'];
 
   let _cache = null, _cacheTime = 0;
+  function _invalidateCache() { _cache = null; _cacheTime = 0; }
+
 
   async function _fetchAll() {
     if (_cache && Date.now() - _cacheTime < 60000) return _cache;
     if (typeof FireDB === 'undefined' || !FireDB.isReady()) return [];
     const { seasonKey } = getSeasonInfo();
     const all = await FireDB.loadSeasonRankings(seasonKey);
-    _cache = all.filter(r => r.firstLogDate);
+    _cache = all.filter(r => r.firstLogDate || r.seasonXp > 0 || r.seasonMin > 0);
     _cacheTime = Date.now();
     return _cache;
   }
@@ -1838,8 +1842,7 @@ const CrewRanking = (() => {
       </div>`;
     }).join('');
   }
-
-  return { render, openModal };
+return { render, openModal, _invalidateCache };
 })();
 
 // ═══════════════════════════════════════════════════════════════════════════
