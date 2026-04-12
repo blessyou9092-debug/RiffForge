@@ -122,7 +122,19 @@ const PracticeBuilder = (() => {
     _updateCompleteBtn(card, s.completed);
     _updateAllCompleteStatus();
   }
-
+// ★ 추가: 포모도로에서 호출 — 이미 완료면 무시, 아니면 완료 처리 + 로컬 저장
+function markSessionComplete(id) {
+  const s = sessions.find(x => x.id === id);
+  if (!s || s.completed) return;
+  s.completed = true;
+  const card = document.getElementById(`session-${id}`);
+  if (card) { _applyCompletedStyle(card, true, s.type); _updateCompleteBtn(card, true); }
+  // 로컬 스토리지에 조용히 저장 (toast 없이)
+  const log = Storage.getLog(editingDate) || {};
+  log.sessions = [...sessions];
+  log.allCompleted = sessions.length > 0 && sessions.every(s => s.completed);
+  Storage.setLog(editingDate, log);
+}
   // ── 완료 시각 스타일 ─────────────────────────────────────────────
   function _applyCompletedStyle(card, completed, type) {
     const overlayId = `complete-overlay-${card.id.replace('session-', '')}`;
@@ -760,6 +772,7 @@ const PracticeBuilder = (() => {
     recommendSessions, addSession, removeSession, adjustMinutes,
     toggleRep, toggleRepsVisible, adjustRepsCount, setCustomName,
     toggleSessionComplete,
+    markSessionComplete,
     savePractice, loadDate, exportJSON, importJSON,
     changeSessionItem, updateMemo, getTotalMinutes,
     setIcon, togglePDFPanel, exportDateRangePDF,
