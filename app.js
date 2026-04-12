@@ -926,7 +926,7 @@ const Pomodoro = (() => {
   // ── 세션 큐 ──────────────────────────────────────────────────────
   let taskQueue = [];      // [{id, name, type, minutes, done}]
   let currentTaskIdx = -1; // 현재 진행 중인 태스크 인덱스 (-1: 자유 모드)
-
+  let _pendingNextTask = -1;
   const TYPE_ICON = { warmup: '🔥', theory: '🎵', practical: '🎸' };
 
   function loadFromBuilder() {
@@ -998,22 +998,28 @@ const Pomodoro = (() => {
     }).join('');
   }
 
-  function _markCurrentDone() {
-    if (currentTaskIdx >= 0 && currentTaskIdx < taskQueue.length) {
-      taskQueue[currentTaskIdx].done = true;
-      // 다음 미완료 세션 자동 예약
-      const next = taskQueue.findIndex((t, i) => i > currentTaskIdx && !t.done);
-      if (next !== -1) {
-        showToast(`☕ 휴식 후 [${taskQueue[next].name}] 자동 시작됩니다`, 'info');
-        setTimeout(() => { if (!isRunning) startTask(next); }, breakMin * 60 * 1000 + 500);
-      } else {
-        currentTaskIdx = -1;
-        showToast('🎉 오늘 연습 세션 전체 완료!', 'success');
-      }
-      renderTaskQueue();
-    }
-  }
+function _markCurrentDone() {
+  if (currentTaskIdx >= 0 && currentTaskIdx < taskQueue.length) {
+    const taskId = taskQueue[currentTaskIdx].id;
+    taskQueue[currentTaskIdx].done = true;
 
+    // ★ 연습일지 세션 완료 동기화
+    if (typeof PracticeBuilder !== 'undefined') {
+      PracticeBuilder.markSessionComplete(taskId);
+    }
+
+    const next = taskQueue.findIndex((t, i) => i > currentTaskIdx && !t.done);
+    if (next !== -1) {
+      _pendingNextTask = next;   // ★ 자동시작 대신 저장만
+      showToast(`☕ 휴식 후 세션 ${next + 1} [${taskQueue[next].name}] 시작 준비하세요!`, 'info');
+    } else {
+      currentTaskIdx = -1;
+      _pendingNextTask = -1;
+      showToast('🎉 오늘 연습 세션 전체 완료!', 'success');
+    }
+    renderTaskQueue();
+  }
+}
   // ── 상태 저장/복원 ──────────────────────────────────────────────
   const _POMO_KEY = 'riffforge_pomo_state';
 
@@ -1130,13 +1136,46 @@ const Pomodoro = (() => {
       isFocus = false;
       const lng = sessionCount % CONFIG.POMO.SESSIONS_UNTIL_LONG === 0;
       remaining = (lng ? CONFIG.POMO.LONG_BREAK_MIN : breakMin) * 60;
-    } else {
-      isFocus = true;
-      remaining = focusMin * 60;
-      showToast('☕ 휴식 완료! 다시 집중해봐요', 'info');
-    }
+} else {
+  isFocus = true;
+  remaining = focusMin * 60;
+  if (_pendingNextTask >= 0) {
+    _showNextSessionPrompt(_pendingNextTask);
+  } else {
+    showToast('☕ 휴식 완료! 다시 집중해봐요', 'info');
+  }
+}
     _bell(); updateDisplay();
   }
+function _showNextSessionPrompt(nextIdx) {
+  const task = taskQueue[nextIdx];
+  if (!task) return;
+  const existing = document.getElementById('pomo-next-prompt');
+  if (existing) existing.remove();
+  const icon = TYPE_ICON[task.type] || '🎵';
+  const el = document.createElement('div');
+  el.id = 'pomo-next-prompt';
+  el.className = 'fixed bottom-24 left-1/2 -translate-x-1/2 z-50 bg-white rounded-2xl shadow-xl border border-amber-200 px-5 py-4 flex flex-col items-center gap-2 w-72';
+  el.innerHTML = `
+    <p class="text-xs text-gray-400 font-medium">☕ 휴식 완료! 다음 세션 준비됐나요?</p>
+    <p class="text-base font-black text-gray-800">${icon} ${task.name}</p>
+    <p class="text-xs text-gray-400">집중 ${task.minutes}분</p>
+    <button onclick="Pomodoro.startNextSession()"
+      class="mt-1 px-6 py-2.5 bg-gradient-to-r from-amber-500 to-orange-500 text-white rounded-xl font-bold text-sm hover:from-amber-600 hover:to-orange-600 transition-all shadow">
+      ▶ 세션 ${nextIdx + 1} 시작하기
+    </button>`;
+  document.body.appendChild(el);
+}
+
+function startNextSession() {
+  const el = document.getElementById('pomo-next-prompt');
+  if (el) el.remove();
+  if (_pendingNextTask >= 0) {
+    const idx = _pendingNextTask;
+    _pendingNextTask = -1;
+    startTask(idx);
+  }
+}
 
   function _bell() { playPomodoroBell(bellType); }
 
@@ -1169,7 +1208,7 @@ const Pomodoro = (() => {
   return {
     startStop, reset, setFocusMin, setBreakMin, init, applyPreset, setBellType,
     getFocusMin: () => focusMin, getBreakMin: () => breakMin,
-    loadFromBuilder, startTask, renderTaskQueue,
+    loadFromBuilder, startTask, renderTaskQueue, startNextSession,
   };
 })();
 
