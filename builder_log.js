@@ -1002,36 +1002,45 @@ const RepertoireTracker = (() => {
       FireDB.saveRepertoire(songs).catch(e => console.warn('[Repertoire] 클라우드 저장 실패:', e));
     }
   }
-  async function syncFromCloud() {
-    if (typeof FireDB === 'undefined' || !FireDB.getUsername()) return;
-    const cloudSongs = await FireDB.loadRepertoire();
-    if (!cloudSongs || !cloudSongs.length) return;
-    const localSongs = load();
+async function syncFromCloud() {
+  if (typeof FireDB === 'undefined' || !FireDB.getUsername()) return;
+  const cloudSongs = await FireDB.loadRepertoire();
+  const localSongs = load();
 
-    const localMap = new Map(localSongs.map(s => [String(s.id), s]));
-    const cloudMap = new Map(cloudSongs.map(s => [String(s.id), s]));
-    const allIds = new Set([...localMap.keys(), ...cloudMap.keys()]);
-
-    const merged = [];
-    allIds.forEach(function(id) {
-      const lo = localMap.get(id);
-      const cl = cloudMap.get(id);
-      if (!lo) { merged.push(cl); return; }
-      if (!cl) { merged.push(lo); return; }
-
-      // updatedAt 기준으로 더 최신 버전 우선
-      const loTime = lo.updatedAt ? new Date(lo.updatedAt).getTime() : 0;
-      const clTime = cl.updatedAt ? new Date(cl.updatedAt).getTime() : 0;
-      const newer = loTime >= clTime ? lo : cl;
-      const older = loTime >= clTime ? cl : lo;
-
-      // 최신 버전 기준으로, 누락된 필드만 오래된 버전에서 보완
-      merged.push(Object.assign({}, older, newer));
-    });
-
-    localStorage.setItem(KEY, JSON.stringify(merged));
+  // 클라우드가 비어있으면 로컬 데이터를 업로드하고 종료
+  if (!cloudSongs || !cloudSongs.length) {
+    if (localSongs.length > 0) {
+      FireDB.saveRepertoire(localSongs)
+        .catch(e => console.warn('[Repertoire] 초기 업로드 실패:', e));
+    }
     render();
+    return;
   }
+
+  const localMap = new Map(localSongs.map(s => [String(s.id), s]));
+  const cloudMap = new Map(cloudSongs.map(s => [String(s.id), s]));
+  const allIds = new Set([...localMap.keys(), ...cloudMap.keys()]);
+
+  const merged = [];
+  allIds.forEach(function(id) {
+    const lo = localMap.get(id);
+    const cl = cloudMap.get(id);
+    if (!lo) { merged.push(cl); return; }
+    if (!cl) { merged.push(lo); return; }
+
+    const loTime = lo.updatedAt ? new Date(lo.updatedAt).getTime() : 0;
+    const clTime = cl.updatedAt ? new Date(cl.updatedAt).getTime() : 0;
+    const newer = loTime >= clTime ? lo : cl;
+    const older = loTime >= clTime ? cl : lo;
+    merged.push(Object.assign({}, older, newer));
+  });
+
+  localStorage.setItem(KEY, JSON.stringify(merged));
+  // ★ 병합 결과를 클라우드에도 다시 저장 (양방향 동기화)
+  FireDB.saveRepertoire(merged)
+    .catch(e => console.warn('[Repertoire] 병합 저장 실패:', e));
+  render();
+}
 
 
   function stateFromProgress(pct) {
