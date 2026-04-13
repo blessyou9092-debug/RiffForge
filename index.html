@@ -1443,11 +1443,15 @@
                 </svg>
               </div>
               <p class="text-xs text-gray-400 text-center mt-2">키를 클릭하여 스케일 음 확인</p>
-              <!-- 키 클릭 시 스케일 음 표시 -->
-              <div id="cof-key-info"
-                class="bg-amber-50 rounded-xl border border-amber-200 p-3 mt-3 min-h-[44px] flex items-center">
-                <p class="text-xs text-gray-400 w-full text-center">키를 클릭하면 스케일 음을 확인할 수 있습니다</p>
-              </div>
+<!-- 키 클릭 시 스케일 음 표시 -->
+<div id="cof-key-info"
+  class="bg-amber-50 rounded-xl border border-amber-200 p-3 mt-3 min-h-[44px] flex items-center">
+  <p class="text-xs text-gray-400 w-full text-center">키를 클릭하면 스케일 음을 확인할 수 있습니다</p>
+</div>
+<!-- 키별 음도 (가로 표) -->
+<div id="cof-diatonic-table"
+  class="bg-white rounded-xl border border-amber-100 p-3 mt-3 hidden">
+</div>
             </div>
 
             <!-- 음도 참고 -->
@@ -1937,33 +1941,84 @@
       }
 
       // ── 5도권 SVG 렌더링 ─────────────────────────────────────────
-      // COF 클릭 시 스케일 음 표시
-      const COF_ENHARMONIC = { Ab: 'G#', Bb: 'A#', Db: 'C#', Eb: 'D#', Cb: 'B', Fb: 'E', 'E#': 'F', 'B#': 'C' };
-      let _cofSelectedEl = null;
-      function cofSelectKey(root, type, segEl) {
-        const r = COF_ENHARMONIC[root] || root;
-        const scaleName = type === 'minor' ? 'Natural Minor' : 'Major';
-        const ints = CONFIG.SCALES[scaleName] || [];
-        const ri = CONFIG.NOTES.indexOf(r);
-        const notes = ints.map((iv, i) => ({
-          note: CONFIG.NOTES[(ri + iv) % 12], deg: i + 1,
-        }));
-        const infoEl = document.getElementById('cof-key-info');
-        if (!infoEl) return;
-        infoEl.innerHTML = `<div class="flex items-center gap-1.5 flex-wrap">
-          <span class="text-xs font-bold text-amber-700 mr-1">${root} ${type === 'minor' ? 'Minor' : 'Major'}:</span>
-          ${notes.map(({ note, deg }) =>
-          `<span class="px-2 py-0.5 rounded-full text-xs font-bold ${deg === 1 ? 'bg-amber-400 text-white' : 'bg-orange-100 text-orange-700'}">${note}</span>`
-        ).join('')}
-        </div>`;
-        // 이전 강조 제거
-        if (_cofSelectedEl) _cofSelectedEl.style.filter = '';
-        if (segEl) { segEl.style.filter = 'brightness(1.3) drop-shadow(0 0 4px rgba(0,0,0,0.4))'; _cofSelectedEl = segEl; }
-      }
+// CONFIG.NOTES 가 플랫 표기 기준이므로 샤프 → 플랫 변환
+const COF_ENHARMONIC = {
+  'F#': 'Gb', 'C#': 'Db', 'G#': 'Ab', 'A#': 'Bb', 'D#': 'Eb',
+  'E#': 'F', 'B#': 'C', 'Cb': 'B', 'Fb': 'E'
+};
+let _cofSelectedEl = null;
+function cofSelectKey(root, type, segEl) {
+  const r = COF_ENHARMONIC[root] || root;
+  const scaleName = type === 'minor' ? 'Natural Minor' : 'Major';
+  const ints = CONFIG.SCALES[scaleName] || [];
+  const ri = CONFIG.NOTES.indexOf(r);
+  if (ri === -1) return;
+  const notes = ints.map((iv, i) => ({
+    note: CONFIG.NOTES[(ri + iv) % 12], deg: i + 1,
+  }));
+
+  // 스케일 음 표시
+  const infoEl = document.getElementById('cof-key-info');
+  if (infoEl) {
+    infoEl.innerHTML = `<div class="flex items-center gap-1.5 flex-wrap">
+      <span class="text-xs font-bold text-amber-700 mr-1">${root} ${type === 'minor' ? 'Minor' : 'Major'}:</span>
+      ${notes.map(({ note, deg }) =>
+        `<span class="px-2 py-0.5 rounded-full text-xs font-bold ${deg === 1 ? 'bg-amber-400 text-white' : 'bg-orange-100 text-orange-700'}">${note}</span>`
+      ).join('')}
+    </div>`;
+  }
+
+  // 키별 음도 (가로 표)
+  const tableEl = document.getElementById('cof-diatonic-table');
+  if (tableEl && notes.length === 7) {
+    const isMajor = type !== 'minor';
+    const suffixes      = isMajor ? ['', 'm', 'm', '', '', 'm', '°']
+                                  : ['m', '°', '', 'm', 'm', '', ''];
+    const romans        = isMajor ? ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII']
+                                  : ['i', 'ii°', 'III', 'iv', 'v', 'VI', 'VII'];
+    const qualityLabels = isMajor
+      ? ['장화음', '단화음', '단화음', '장화음', '장화음', '단화음', '강화음']
+      : ['단화음', '강화음', '장화음', '단화음', '단화음', '장화음', '장화음'];
+    const chordNames = notes.map((n, i) => n.note + suffixes[i]);
+    const relNote = isMajor ? notes[5].note : notes[2].note;
+    const relKey  = isMajor
+      ? `${root} 장조 ↔ ${relNote}m 단조`
+      : `${root} 단조 ↔ ${relNote} 장조`;
+    const qClass = (q) => q === '장화음' ? 'text-blue-700 font-semibold'
+      : q === '강화음' ? 'text-red-500 font-semibold' : 'text-gray-500 font-semibold';
+    tableEl.innerHTML = `
+      <h4 class="font-black text-gray-500 text-[10px] uppercase tracking-widest mb-2">키별 음도 (Diatonic Chords)</h4>
+      <div class="overflow-x-auto">
+        <table class="w-full text-xs text-center border-collapse">
+          <thead>
+            <tr class="bg-gray-50">
+              ${romans.map(r => `<th class="py-2 px-2 font-bold text-gray-500 border border-gray-200 min-w-[48px]">${r}</th>`).join('')}
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              ${chordNames.map((c, i) => `<td class="py-2 px-1 font-bold text-sm border border-gray-200 ${suffixes[i] === '°' ? 'text-red-600' : 'text-gray-800'}">${c}</td>`).join('')}
+            </tr>
+            <tr class="bg-gray-50">
+              ${qualityLabels.map(q => `<td class="py-1.5 px-1 text-[11px] border border-gray-200 ${qClass(q)}">${q}</td>`).join('')}
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="text-xs text-amber-700 font-semibold mt-2">관계조: ${relKey}</p>
+    `;
+    tableEl.classList.remove('hidden');
+  }
+
+  // 이전 강조 제거
+  if (_cofSelectedEl) _cofSelectedEl.style.filter = '';
+  if (segEl) { segEl.style.filter = 'brightness(1.3) drop-shadow(0 0 4px rgba(0,0,0,0.4))'; _cofSelectedEl = segEl; }
+}
+
 
       const cofSvg = document.getElementById('cof-svg');
       if (cofSvg) {
-        const majorKeys = ['C', 'G', 'D', 'A', 'E', 'B', 'F#', 'Db', 'Ab', 'Eb', 'Bb', 'F'];
+        const majorKeys = ['C', 'G', 'D', 'A', 'E', 'B', 'Gb', 'Db', 'Ab', 'Eb', 'Bb', 'F'];
         const minorKeys = ['Am', 'Em', 'Bm', 'F#m', 'C#m', 'G#m', 'Ebm', 'Bbm', 'Fm', 'Cm', 'Gm', 'Dm'];
         const cx = 180, cy = 180;
         const outerR = 150, innerR = 105, midR = 128;
