@@ -2022,6 +2022,7 @@ const ReferenceUI = (() => {
   let _triadType = 'major';   // 'major'|'minor'|'dim'|'aug'|'7'|'maj7'|'m7'|'m7b5'
   let _triadVoicing = 'all';  // 'all'|'root'|'1st'|'2nd'|'3rd'
   let _triadStrGroup = '123'; // '123'|'234'|'345'|'456'
+  let _triadLabelMode = 'interval'; // 'interval' | 'note'
   let _pentaPos = 0;         // 0=All, 1~5
   let _pentaKey = 'major';   // 'major'|'minor'
   let _chordToneRoot = 'A';
@@ -2422,7 +2423,8 @@ const ReferenceUI = (() => {
         const c = _ROLE_COLORS[r] || _ROLE_COLORS['R'];
         return {
           fill: c.fill, stroke: c.stroke, textFill: c.textFill,
-          dotR: r === 'R' ? 11 : 9, label: r, opacity: 1
+          dotR: r === 'R' ? 11 : 9, label: _triadLabelMode === 'note' ? note : r, opacity: 1
+
         };
       };
 
@@ -2786,6 +2788,17 @@ const VCOLS = { all: 'bg-gray-700', root: 'bg-amber-500', '1st': 'bg-indigo-500'
   }
 
   function setTriadRoot(root) { _triadRoot = root; renderTriadDiagram(); }
+  function setTriadLabelMode(mode) {
+    _triadLabelMode = mode;
+    document.querySelectorAll('.label-mode-btn').forEach(btn => {
+      const on = btn.dataset.lmode === mode;
+      btn.className = `label-mode-btn text-xs px-3 py-1.5 rounded-lg font-bold border transition-all ${
+        on ? 'bg-amber-500 text-white border-transparent'
+           : 'bg-white text-gray-600 border-gray-200 hover:bg-amber-50'
+      }`;
+    });
+    renderTriadDiagram();
+  }
 
   function setTriadType(type) {
     _triadType = type;
@@ -2868,7 +2881,7 @@ const VCOLS = { all: 'bg-gray-700', root: 'bg-amber-500', '1st': 'bg-indigo-500'
   return {
     onEnter, switchTab,
     renderPentaPositions, renderTriadDiagram, renderChordToneRef,
-    setTriadRoot, setTriadType, setTriadVoicing, setTriadStringGroup,
+    setTriadRoot, setTriadType, setTriadVoicing, setTriadStringGroup, setTriadLabelMode,
     setPentaPos, setPentaKey,
     setCagedPos, setLabelMode, onScaleChange,
     setChordToneRoot, setChordToneType, setChordToneLabelMode,
