@@ -1426,10 +1426,9 @@ async function syncFromCloud() {
             <span>완성도${hasParts && !song.partsManual ? ' <span class="text-amber-500 text-[10px]">자동</span>' : ''}</span>
             <span class="font-bold text-gray-700">${pct}%</span>
           </div>
-          ${!hasParts || song.partsManual ? `
           <input type="range" min="0" max="100" value="${pct}"
-            onchange="RepertoireTracker.setProgress(${song.id}, parseInt(this.value))"
-            class="w-full h-2 accent-amber-500 cursor-pointer" />` : ''}
+            ${hasParts && !song.partsManual ? 'disabled' : `onchange="RepertoireTracker.setProgress(${song.id}, parseInt(this.value))"`}
+            class="w-full h-2 accent-amber-500 ${hasParts && !song.partsManual ? 'opacity-30 cursor-not-allowed' : 'cursor-pointer'}" />
           <div class="w-full bg-gray-100 rounded-full h-1.5">
             <div class="${sty.bar} h-1.5 rounded-full transition-all" style="width:${pct}%"></div>
           </div>
