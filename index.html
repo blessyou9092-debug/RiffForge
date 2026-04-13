@@ -1609,6 +1609,14 @@
                   </div>
                 </div>
               </div>
+              <!-- Label Mode Toggle -->
+              <div class="mb-3 flex items-center gap-2">
+                <span class="text-[10px] font-black text-gray-400 uppercase tracking-wide shrink-0">라벨</span>
+                <button data-lmode="interval" onclick="ReferenceUI.setTriadLabelMode('interval')"
+                  class="label-mode-btn text-xs px-3 py-1.5 rounded-lg font-bold border bg-amber-500 text-white border-transparent">음도 (R · 3 · 5)</button>
+                <button data-lmode="note" onclick="ReferenceUI.setTriadLabelMode('note')"
+                  class="label-mode-btn text-xs px-3 py-1.5 rounded-lg font-bold border bg-white text-gray-600 border-gray-200 hover:bg-amber-50">음이름 (C · E · G)</button>
+              </div>
 
               <!-- 지판 -->
               <div id="triad-voicing-grid" class="grid grid-cols-1 gap-3">
