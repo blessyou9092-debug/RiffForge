@@ -489,7 +489,8 @@ const AppState = (() => {
     const wk = getWeekKey();
     if (localStorage.getItem('rf_chal_week') !== wk) {
       localStorage.setItem('rf_chal_week', wk);
-      localStorage.removeItem('rf_chal_prog');
+      // rf_chal_prog 리셋은 ChallengeTracker._getProg()가 rf_chal_week_app 기준으로 처리함
+      // 여기서 삭제하면 addRepSong 등이 방금 저장한 진행이 날아감
     }
     let prog = {};
     try { prog = JSON.parse(localStorage.getItem('rf_chal_prog')) || {}; } catch { }
