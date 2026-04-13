@@ -2019,9 +2019,9 @@ const ReferenceUI = (() => {
   // ── 상태 ────────────────────────────────────────────────────────────────
   let activeTab = 'circle';
   let _triadRoot = 'C';
-  let _triadType = 'major';   // 'major'|'minor'|'dim'|'aug'
-  let _triadVoicing = 'all';     // 'all'|'root'|'1st'|'2nd'
-  let _triadStrGroup = '123';     // '123'|'234'|'345'|'456'
+  let _triadType = 'major';   // 'major'|'minor'|'dim'|'aug'|'7'|'maj7'|'m7'|'m7b5'
+  let _triadVoicing = 'all';  // 'all'|'root'|'1st'|'2nd'|'3rd'
+  let _triadStrGroup = '123'; // '123'|'234'|'345'|'456'
   let _pentaPos = 0;         // 0=All, 1~5
   let _pentaKey = 'major';   // 'major'|'minor'
   let _chordToneRoot = 'A';
@@ -2050,6 +2050,42 @@ const ReferenceUI = (() => {
 
   // v9 String Set 그룹 매핑: '123'→strings=[2,1,0], '234'→[3,2,1], ...
   // v9에서 strings는 [고음줄idx, ..., 저음줄idx] (0=1e, 5=6E)
+  function _is7thChord(t) { return t === '7' || t === 'maj7' || t === 'm7' || t === 'm7b5'; }
+
+  // 7th 모드 ↔ triad 모드 UI 동기화
+  function _sync7thUI(is7th) {
+    const btn456 = document.querySelector('[data-strgrp="456"]');
+    if (btn456) btn456.style.display = is7th ? 'none' : '';
+    const btn3rd = document.querySelector('[data-voicing="3rd"]');
+    if (btn3rd) btn3rd.style.display = is7th ? '' : 'none';
+    // 스트링 그룹 버튼 라벨 변경
+    const labels = is7th
+      ? { '123': '1-2-3-4', '234': '2-3-4-5', '345': '3-4-5-6' }
+      : { '123': '1-2-3',   '234': '2-3-4',   '345': '3-4-5'   };
+    Object.entries(labels).forEach(([g, lbl]) => {
+      const btn = document.querySelector(`[data-strgrp="${g}"]`);
+      if (btn) btn.textContent = lbl;
+    });
+    // 7th 모드로 전환 시 '456' 그룹에 있었다면 '345'로 리셋
+    if (is7th && _triadStrGroup === '456') {
+      _triadStrGroup = '345';
+      document.querySelectorAll('.strgrp-btn').forEach(b => {
+        const on = b.dataset.strgrp === '345';
+        b.classList.toggle('bg-indigo-500', on); b.classList.toggle('text-white', on);
+        b.classList.toggle('bg-white', !on); b.classList.toggle('text-gray-600', !on);
+      });
+    }
+    // 3rd Inv 선택 상태에서 triad 모드로 전환 시 'all' 리셋
+    if (!is7th && _triadVoicing === '3rd') {
+      _triadVoicing = 'all';
+      document.querySelectorAll('.voicing-btn').forEach(b => {
+        const on = b.dataset.voicing === 'all';
+        b.classList.toggle('bg-gray-700', on); b.classList.toggle('text-white', on);
+        b.classList.toggle('bg-white', !on); b.classList.toggle('text-gray-600', !on);
+      });
+    }
+  }
+
   const _V9_STR_SETS = {
     '123': 0, // String Set 1
     '234': 1, // String Set 2
@@ -2135,13 +2171,13 @@ const ReferenceUI = (() => {
         {
           strings: [3, 2, 1], vc: [
             { name: 'Root', dots: [{ s: 3, f: 10, r: 'R' }, { s: 2, f: 8, r: 'b3' }, { s: 1, f: 7, r: 'b5' }] },
-            { name: '1st Inv', dots: [{ s: 3, f: 1, r: 'b3' }, { s: 2, f: 11, r: 'b5' }, { s: 1, f: 1, r: 'R' }] },
+            { name: '1st Inv', dots: [{ s: 3, f: 13, r: 'b3' }, { s: 2, f: 11, r: 'b5' }, { s: 1, f: 13, r: 'R' }] },
             { name: '2nd Inv', dots: [{ s: 3, f: 4, r: 'b5' }, { s: 2, f: 5, r: 'R' }, { s: 1, f: 4, r: 'b3' }] },
           ]
         },
         {
           strings: [4, 3, 2], vc: [
-            { name: 'Root', dots: [{ s: 4, f: 3, r: 'R' }, { s: 3, f: 1, r: 'b3' }, { s: 2, f: 11, r: 'b5' }] },
+            { name: 'Root', dots: [{ s: 4, f: 15, r: 'R' }, { s: 3, f: 13, r: 'b3' }, { s: 2, f: 11, r: 'b5' }] },
             { name: '1st Inv', dots: [{ s: 4, f: 6, r: 'b3' }, { s: 3, f: 4, r: 'b5' }, { s: 2, f: 5, r: 'R' }] },
             { name: '2nd Inv', dots: [{ s: 4, f: 9, r: 'b5' }, { s: 3, f: 10, r: 'R' }, { s: 2, f: 8, r: 'b3' }] },
           ]
@@ -2187,6 +2223,95 @@ const ReferenceUI = (() => {
         },
       ]
     },
+        '7': {
+      sets: [
+        { strings: [3,2,1,0], vc: [
+          { name: 'Root',    dots: [{s:3,f:10,r:'R'},{s:2,f:9,r:'3'},{s:1,f:8,r:'5'},{s:0,f:6,r:'b7'}] },
+          { name: '1st Inv', dots: [{s:3,f:2,r:'3'},{s:2,f:3,r:'b7'},{s:1,f:1,r:'R'},{s:0,f:3,r:'5'}] },
+          { name: '2nd Inv', dots: [{s:3,f:5,r:'5'},{s:2,f:5,r:'R'},{s:1,f:5,r:'3'},{s:0,f:6,r:'b7'}] },
+          { name: '3rd Inv', dots: [{s:3,f:8,r:'b7'},{s:2,f:9,r:'3'},{s:1,f:8,r:'5'},{s:0,f:8,r:'R'}] },
+        ]},
+        { strings: [4,3,2,1], vc: [
+          { name: 'Root',    dots: [{s:4,f:3,r:'R'},{s:3,f:5,r:'5'},{s:2,f:3,r:'b7'},{s:1,f:5,r:'3'}] },
+          { name: '1st Inv', dots: [{s:4,f:7,r:'3'},{s:3,f:8,r:'b7'},{s:2,f:5,r:'R'},{s:1,f:8,r:'5'}] },
+          { name: '2nd Inv', dots: [{s:4,f:10,r:'5'},{s:3,f:10,r:'R'},{s:2,f:9,r:'3'},{s:1,f:11,r:'b7'}] },
+          { name: '3rd Inv', dots: [{s:4,f:13,r:'b7'},{s:3,f:14,r:'3'},{s:2,f:12,r:'5'},{s:1,f:13,r:'R'}] },
+        ]},
+        { strings: [5,4,3,2], vc: [
+          { name: 'Root',    dots: [{s:5,f:8,r:'R'},{s:4,f:10,r:'5'},{s:3,f:8,r:'b7'},{s:2,f:9,r:'3'}] },
+          { name: '1st Inv', dots: [{s:5,f:12,r:'3'},{s:4,f:13,r:'b7'},{s:3,f:10,r:'R'},{s:2,f:12,r:'5'}] },
+          { name: '2nd Inv', dots: [{s:5,f:3,r:'5'},{s:4,f:3,r:'R'},{s:3,f:2,r:'3'},{s:2,f:3,r:'b7'}] },
+          { name: '3rd Inv', dots: [{s:5,f:6,r:'b7'},{s:4,f:7,r:'3'},{s:3,f:5,r:'5'},{s:2,f:5,r:'R'}] },
+        ]},
+      ]
+    },
+    'maj7': {
+      sets: [
+        { strings: [3,2,1,0], vc: [
+          { name: 'Root',    dots: [{s:3,f:10,r:'R'},{s:2,f:9,r:'3'},{s:1,f:8,r:'5'},{s:0,f:7,r:'7'}] },
+          { name: '1st Inv', dots: [{s:3,f:2,r:'3'},{s:2,f:4,r:'7'},{s:1,f:1,r:'R'},{s:0,f:3,r:'5'}] },
+          { name: '2nd Inv', dots: [{s:3,f:5,r:'5'},{s:2,f:5,r:'R'},{s:1,f:5,r:'3'},{s:0,f:7,r:'7'}] },
+          { name: '3rd Inv', dots: [{s:3,f:9,r:'7'},{s:2,f:9,r:'3'},{s:1,f:8,r:'5'},{s:0,f:8,r:'R'}] },
+        ]},
+        { strings: [4,3,2,1], vc: [
+          { name: 'Root',    dots: [{s:4,f:3,r:'R'},{s:3,f:5,r:'5'},{s:2,f:4,r:'7'},{s:1,f:5,r:'3'}] },
+          { name: '1st Inv', dots: [{s:4,f:7,r:'3'},{s:3,f:9,r:'7'},{s:2,f:5,r:'R'},{s:1,f:8,r:'5'}] },
+          { name: '2nd Inv', dots: [{s:4,f:10,r:'5'},{s:3,f:10,r:'R'},{s:2,f:9,r:'3'},{s:1,f:12,r:'7'}] },
+          { name: '3rd Inv', dots: [{s:4,f:14,r:'7'},{s:3,f:14,r:'3'},{s:2,f:12,r:'5'},{s:1,f:13,r:'R'}] },
+        ]},
+        { strings: [5,4,3,2], vc: [
+          { name: 'Root',    dots: [{s:5,f:8,r:'R'},{s:4,f:10,r:'5'},{s:3,f:9,r:'7'},{s:2,f:9,r:'3'}] },
+          { name: '1st Inv', dots: [{s:5,f:0,r:'3'},{s:4,f:2,r:'7'},{s:3,f:5,r:'5'},{s:2,f:5,r:'R'}] },
+          { name: '2nd Inv', dots: [{s:5,f:3,r:'5'},{s:4,f:3,r:'R'},{s:3,f:2,r:'3'},{s:2,f:4,r:'7'}] },
+          { name: '3rd Inv', dots: [{s:5,f:7,r:'7'},{s:4,f:7,r:'3'},{s:3,f:5,r:'5'},{s:2,f:5,r:'R'}] },
+        ]},
+      ]
+    },
+    'm7': {
+      sets: [
+        { strings: [3,2,1,0], vc: [
+          { name: 'Root',    dots: [{s:3,f:10,r:'R'},{s:2,f:8,r:'b3'},{s:1,f:8,r:'5'},{s:0,f:6,r:'b7'}] },
+          { name: '1st Inv', dots: [{s:3,f:1,r:'b3'},{s:2,f:3,r:'b7'},{s:1,f:1,r:'R'},{s:0,f:3,r:'5'}] },
+          { name: '2nd Inv', dots: [{s:3,f:5,r:'5'},{s:2,f:5,r:'R'},{s:1,f:4,r:'b3'},{s:0,f:6,r:'b7'}] },
+          { name: '3rd Inv', dots: [{s:3,f:8,r:'b7'},{s:2,f:8,r:'b3'},{s:1,f:8,r:'5'},{s:0,f:8,r:'R'}] },
+        ]},
+        { strings: [4,3,2,1], vc: [
+          { name: 'Root',    dots: [{s:4,f:3,r:'R'},{s:3,f:5,r:'5'},{s:2,f:3,r:'b7'},{s:1,f:4,r:'b3'}] },
+          { name: '1st Inv', dots: [{s:4,f:6,r:'b3'},{s:3,f:8,r:'b7'},{s:2,f:5,r:'R'},{s:1,f:8,r:'5'}] },
+          { name: '2nd Inv', dots: [{s:4,f:10,r:'5'},{s:3,f:10,r:'R'},{s:2,f:8,r:'b3'},{s:1,f:11,r:'b7'}] },
+          { name: '3rd Inv', dots: [{s:4,f:13,r:'b7'},{s:3,f:13,r:'b3'},{s:2,f:12,r:'5'},{s:1,f:13,r:'R'}] },
+        ]},
+        { strings: [5,4,3,2], vc: [
+          { name: 'Root',    dots: [{s:5,f:8,r:'R'},{s:4,f:10,r:'5'},{s:3,f:8,r:'b7'},{s:2,f:8,r:'b3'}] },
+          { name: '1st Inv', dots: [{s:5,f:11,r:'b3'},{s:4,f:13,r:'b7'},{s:3,f:10,r:'R'},{s:2,f:12,r:'5'}] },
+          { name: '2nd Inv', dots: [{s:5,f:3,r:'5'},{s:4,f:3,r:'R'},{s:3,f:1,r:'b3'},{s:2,f:3,r:'b7'}] },
+          { name: '3rd Inv', dots: [{s:5,f:6,r:'b7'},{s:4,f:6,r:'b3'},{s:3,f:5,r:'5'},{s:2,f:5,r:'R'}] },
+        ]},
+      ]
+    },
+    'm7b5': {
+      sets: [
+        { strings: [3,2,1,0], vc: [
+          { name: 'Root',    dots: [{s:3,f:10,r:'R'},{s:2,f:8,r:'b3'},{s:1,f:7,r:'b5'},{s:0,f:6,r:'b7'}] },
+          { name: '1st Inv', dots: [{s:3,f:1,r:'b3'},{s:2,f:3,r:'b7'},{s:1,f:1,r:'R'},{s:0,f:2,r:'b5'}] },
+          { name: '2nd Inv', dots: [{s:3,f:4,r:'b5'},{s:2,f:5,r:'R'},{s:1,f:4,r:'b3'},{s:0,f:6,r:'b7'}] },
+          { name: '3rd Inv', dots: [{s:3,f:8,r:'b7'},{s:2,f:8,r:'b3'},{s:1,f:7,r:'b5'},{s:0,f:8,r:'R'}] },
+        ]},
+        { strings: [4,3,2,1], vc: [
+          { name: 'Root',    dots: [{s:4,f:3,r:'R'},{s:3,f:4,r:'b5'},{s:2,f:3,r:'b7'},{s:1,f:4,r:'b3'}] },
+          { name: '1st Inv', dots: [{s:4,f:6,r:'b3'},{s:3,f:8,r:'b7'},{s:2,f:5,r:'R'},{s:1,f:7,r:'b5'}] },
+          { name: '2nd Inv', dots: [{s:4,f:9,r:'b5'},{s:3,f:10,r:'R'},{s:2,f:8,r:'b3'},{s:1,f:11,r:'b7'}] },
+          { name: '3rd Inv', dots: [{s:4,f:13,r:'b7'},{s:3,f:13,r:'b3'},{s:2,f:11,r:'b5'},{s:1,f:13,r:'R'}] },
+        ]},
+        { strings: [5,4,3,2], vc: [
+          { name: 'Root',    dots: [{s:5,f:8,r:'R'},{s:4,f:9,r:'b5'},{s:3,f:8,r:'b7'},{s:2,f:8,r:'b3'}] },
+          { name: '1st Inv', dots: [{s:5,f:11,r:'b3'},{s:4,f:13,r:'b7'},{s:3,f:10,r:'R'},{s:2,f:11,r:'b5'}] },
+          { name: '2nd Inv', dots: [{s:5,f:2,r:'b5'},{s:4,f:3,r:'R'},{s:3,f:1,r:'b3'},{s:2,f:3,r:'b7'}] },
+          { name: '3rd Inv', dots: [{s:5,f:6,r:'b7'},{s:4,f:6,r:'b3'},{s:3,f:4,r:'b5'},{s:2,f:5,r:'R'}] },
+        ]},
+      ]
+    },
+
   };
 
   /**
@@ -2208,15 +2333,16 @@ const ReferenceUI = (() => {
 
   // 역할 → RiffForge SVG 색상
   const _ROLE_COLORS = {
-    'R': { fill: '#ef4444', stroke: '#dc2626', textFill: '#fff' },
-    '3': { fill: '#22c55e', stroke: '#16a34a', textFill: '#fff' },
-    'b3': { fill: '#22c55e', stroke: '#16a34a', textFill: '#fff' },
-    '5': { fill: '#3b82f6', stroke: '#2563eb', textFill: '#fff' },
-    'b5': { fill: '#3b82f6', stroke: '#2563eb', textFill: '#fff' },
-    '#5': { fill: '#3b82f6', stroke: '#2563eb', textFill: '#fff' },
-    '7': { fill: '#a855f7', stroke: '#7c3aed', textFill: '#fff' },
-    'b7': { fill: '#a855f7', stroke: '#7c3aed', textFill: '#fff' },
+    'R':  { fill: '#f5a623', stroke: '#e09310', textFill: '#fff' },
+    '3':  { fill: '#0284c7', stroke: '#0369a1', textFill: '#fff' },
+    'b3': { fill: '#0284c7', stroke: '#0369a1', textFill: '#fff' },
+    '5':  { fill: '#38bdf8', stroke: '#0ea5e9', textFill: '#fff' },
+    'b5': { fill: '#38bdf8', stroke: '#0ea5e9', textFill: '#fff' },
+    '#5': { fill: '#38bdf8', stroke: '#0ea5e9', textFill: '#fff' },
+    '7':  { fill: '#bae6fd', stroke: '#7dd3fc', textFill: '#0369a1' },
+    'b7': { fill: '#bae6fd', stroke: '#7dd3fc', textFill: '#0369a1' },
   };
+
 
   /**
    * 트라이어드 렌더링
@@ -2233,8 +2359,9 @@ const ReferenceUI = (() => {
     if (!strSet) return;
 
     const shifted = _dotsForKey(strSet.vc, semOff); // [{name, dots}] 이미 key 적용됨
-    const strLabel = _triadStrGroup.split('').join('-');
-
+    const is7th = _is7thChord(_triadType);
+    const _7thLabels = { '123': '1-2-3-4', '234': '2-3-4-5', '345': '3-4-5-6' };
+    const strLabel = is7th ? _7thLabels[_triadStrGroup] || _triadStrGroup : _triadStrGroup.split('').join('-');
     // RiffForge: activeStrings Set (sIdx 기준, 0=6번줄)
     // v9 strings = [2,1,0] → rfSIdx = [3,4,5]
     const activeStrings = new Set(strSet.strings.map(v9s => 5 - v9s));
@@ -2242,16 +2369,20 @@ const ReferenceUI = (() => {
     // 전위명 매핑
     const INV_NAME_MAP = { 'Root': 'root', '1st Inv': '1st', '2nd Inv': '2nd' };
     const invLabels = {
-      root: `Root Position · ${strLabel}번줄`,
+      root:  `Root Position · ${strLabel}번줄`,
       '1st': `1st Inversion · ${strLabel}번줄`,
       '2nd': `2nd Inversion · ${strLabel}번줄`,
+      '3rd': `3rd Inversion · ${strLabel}번줄`,
     };
+
 
     const voicings = [
       { key: 'root', shiftedVc: shifted.find(v => v.name === 'Root') },
-      { key: '1st', shiftedVc: shifted.find(v => v.name === '1st Inv') },
-      { key: '2nd', shiftedVc: shifted.find(v => v.name === '2nd Inv') },
+      { key: '1st',  shiftedVc: shifted.find(v => v.name === '1st Inv') },
+      { key: '2nd',  shiftedVc: shifted.find(v => v.name === '2nd Inv') },
+      { key: '3rd',  shiftedVc: shifted.find(v => v.name === '3rd Inv') },
     ];
+
 
     voicings.forEach(({ key, shiftedVc }) => {
       const containerId = `triad-fb-${key === 'root' ? 'root' : key}`;
@@ -2635,7 +2766,7 @@ const ReferenceUI = (() => {
 
   function setTriadVoicing(v) {
     _triadVoicing = v;
-    const VCOLS = { all: 'bg-gray-700', root: 'bg-red-500', '1st': 'bg-green-600', '2nd': 'bg-blue-500' };
+const VCOLS = { all: 'bg-gray-700', root: 'bg-amber-500', '1st': 'bg-indigo-500', '2nd': 'bg-emerald-500', '3rd': 'bg-rose-500' };
     document.querySelectorAll('.voicing-btn').forEach(btn => {
       const on = btn.dataset.voicing === v;
       const col = VCOLS[btn.dataset.voicing] || 'bg-amber-500';
@@ -2664,9 +2795,9 @@ const ReferenceUI = (() => {
       btn.classList.toggle('bg-white', !on); btn.classList.toggle('text-gray-600', !on);
       btn.classList.toggle('border', !on);
     });
+    _sync7thUI(_is7thChord(type));
     renderTriadDiagram();
   }
-
   function setPentaPos(pos) {
     _pentaPos = pos;
     const BTN_BG = ['bg-gray-700', 'bg-amber-400', 'bg-indigo-500', 'bg-emerald-500', 'bg-orange-500', 'bg-pink-500'];
