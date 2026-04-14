@@ -190,8 +190,13 @@ const Fretboard = (() => {
           const isRoot      = note === rootNote;
           const isChordRoot = chordRoot && note === chordRoot && !isRoot;
           const isThird     = !chordRoot && note === thirdNote && !isRoot;
+const _ri = CONFIG.NOTES.indexOf(rootNote);
+const _ni = CONFIG.NOTES.indexOf(note);
+const _semi = (_ni - _ri + 12) % 12;
+const _isLight = _semi === 2 || _semi === 8 || _semi === 9;
 if (isRoot)           { fill='#f97316'; stroke='#c2410c'; textFill='#fff'; dotR=10; }
 else if (isChordRoot) { fill='#ef4444'; stroke='#dc2626'; textFill='#fff'; dotR=11; }
+else if (_isLight)    { fill='#bae6fd'; stroke='#0284c7'; textFill='#0c4a6e'; }
 else                  { fill='#60a5fa'; stroke='#2563eb'; textFill='#fff'; }
         }
 
