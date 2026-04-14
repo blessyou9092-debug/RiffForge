@@ -2469,10 +2469,10 @@ const ReferenceUI = (() => {
   };
 
   // v9 PENTA_POS_OFFSETS (5A줄 루트 기준 창 시작 오프셋)
-  const PENTA_POS_OFFSETS = {
-    major: [-1, 2, 4, 6, 9],
-    minor: [0, 4, 7, 9, 12],
-  };
+const PENTA_POS_OFFSETS = {
+  major: [0, 2, 4, 7, 9],
+  minor: [0, 3, 5, 7, 10],
+};
 
   const CAGED_NAMES = {
     major: ['A Form — Pos 1', 'E Form — Pos 2', 'C Form — Pos 3', 'D Form — Pos 4', 'G Form — Pos 5'],
@@ -2502,7 +2502,7 @@ const ReferenceUI = (() => {
     return offsets.map((off, pi) => {
       let posStart = r5A + off;
       while (posStart < 0) posStart += 12;
-      while (posStart > 12) posStart -= 12;
+      while (posStart > 17) posStart -= 12;
       const posEnd = posStart + 5;
 
       const allNotes = [];
@@ -2712,8 +2712,8 @@ const ReferenceUI = (() => {
       const inZone = box ? (fret >= box.start && fret <= box.end) : false;
       const isRoot = note === rootNote;
       return {
-        fill: inZone ? (isRoot ? '#f59e0b' : '#fb923c') : '#d1d5db',
-        stroke: inZone ? (isRoot ? '#d97706' : '#ea580c') : '#9ca3af',
+fill: inZone ? (isRoot ? '#f97316' : '#60a5fa') : '#d1d5db',
+stroke: inZone ? (isRoot ? '#c2410c' : '#2563eb') : '#9ca3af',
         textFill: inZone ? '#fff' : '#9ca3af',
         dotR: inZone && isRoot ? 11 : 8,
         opacity: inZone ? 1 : 0.18, label: note,
