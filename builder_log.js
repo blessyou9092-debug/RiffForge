@@ -1530,10 +1530,18 @@ const ChallengeTracker = (() => {
     return Storage.get('rf_chal_prog', {});
   }
 
-  function _setProg(prog) {
-    Storage.set('rf_chal_week_app', _weekKey());
-    Storage.set('rf_chal_prog', prog);
+function _setProg(prog) {
+  Storage.set('rf_chal_week_app', _weekKey());
+  Storage.set('rf_chal_prog', prog);
+  // Firestore 비동기 저장 (chalProg 변경 즉시 반영)
+  if (typeof FireDB !== 'undefined' && FireDB.isReady() && FireDB.getUsername()) {
+    FireDB.saveProfile({
+      chalProg: prog,
+      chalWeek: _weekKey(),
+      updatedAt: new Date().toISOString(),
+    }).catch(e => console.warn('[ChallengeTracker] saveProfile 실패:', e));
   }
+}
 
   // ── 이번 주 활성 챌린지 3개 계산 (seededShuffle 내부 구현) ───
   function _getActiveThree() {
