@@ -103,6 +103,8 @@ const CONFIG = {
     { id: 'M9', label: 'M9', suffix: 'maj9', intervals: [0, 4, 7, 11, 14] },
     { id: 'm9', label: 'm9', suffix: 'm9', intervals: [0, 3, 7, 10, 14] },
     { id: 'dom9', label: '9', suffix: '9', intervals: [0, 4, 7, 10, 14] }
+        { id: 'dom9', label: '9', suffix: '9', intervals: [0, 4, 7, 10, 14] },
+    { id: 'sus4', label: 'sus4', suffix: 'sus4', intervals: [0, 5, 7] }
   ],
 
   // ─── 화성 악기 ────────────────────────────────────────────────────
