@@ -2496,11 +2496,11 @@ const PENTA_POS_OFFSETS = {
     const rootSemi = KEY_SEMITONES[rootNote] || 0;
     const intervals = PENTA_INTERVALS[mode];
     // 5A줄(v9 si=4)의 루트 프렛: A=9(MIDI mod12) 기준
-    const r5A = (rootSemi - 9 + 12) % 12;
-    const offsets = PENTA_POS_OFFSETS[mode];
+const r6E = (rootSemi - 4 + 12) % 12;
+const offsets = PENTA_POS_OFFSETS[mode];
 
-    return offsets.map((off, pi) => {
-      let posStart = r5A + off;
+return offsets.map((off, pi) => {
+  let posStart = r6E + off;
       while (posStart < 0) posStart += 12;
       while (posStart > 17) posStart -= 12;
       const posEnd = posStart + 5;
@@ -2609,13 +2609,13 @@ const PENTA_POS_OFFSETS = {
     return map;
   }
 
-  const _CT_COLORS = {
-    root: { fill: '#ef4444', stroke: '#dc2626', textFill: '#fff' },
-    third: { fill: '#22c55e', stroke: '#16a34a', textFill: '#fff' },
-    fifth: { fill: '#3b82f6', stroke: '#2563eb', textFill: '#fff' },
-    seventh: { fill: '#a855f7', stroke: '#7c3aed', textFill: '#fff' },
-    ninth: { fill: '#ec4899', stroke: '#be185d', textFill: '#fff' },
-  };
+const _CT_COLORS = {
+  root:    { fill: '#f97316', stroke: '#c2410c', textFill: '#fff' },
+  third:   { fill: '#bae6fd', stroke: '#0284c7', textFill: '#0c4a6e' },
+  fifth:   { fill: '#38bdf8', stroke: '#0369a1', textFill: '#fff' },
+  seventh: { fill: '#3b82f6', stroke: '#1d4ed8', textFill: '#fff' },
+  ninth:   { fill: '#818cf8', stroke: '#4338ca', textFill: '#fff' },
+};
   const _CT_LBL = { root: 'R', third: '3', fifth: '5', seventh: '7', ninth: '9' };
   const _SEMI_LBL = { 0: 'R', 1: '♭2', 2: '2', 3: '♭3', 4: '3', 5: '4', 6: '♭5', 7: '5', 8: '♭6', 9: '6', 10: '♭7', 11: '7', 14: '9' };
 
@@ -2643,7 +2643,7 @@ const PENTA_POS_OFFSETS = {
       const ct = CONFIG.CHORD_TYPES.find(c => c.id === _chordToneType);
       const intervals = ct?.intervals || [0, 4, 7];
       const ri = CONFIG.NOTES.indexOf(_chordToneRoot);
-      const roleColors = ['bg-red-500', 'bg-green-500', 'bg-blue-500', 'bg-purple-500', 'bg-pink-500'];
+const roleColors = ['bg-orange-500', 'bg-sky-200', 'bg-sky-400', 'bg-blue-500', 'bg-indigo-400'];
       legend.innerHTML = intervals.map((iv, i) => {
         const note = CONFIG.NOTES[(ri + iv) % 12];
         return `<span class="flex items-center gap-1">
