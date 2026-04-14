@@ -111,6 +111,14 @@ const AppState = (() => {
               localStorage.setItem('rf_chal_prog', JSON.stringify(profile.chalProg));
             }
           }
+          // 수확 컬렉션 복원 (클라우드 ∪ 로컬)
+          if (profile.harvested && Array.isArray(profile.harvested)) {
+            const localHarvested = Storage.get(CONFIG.KEYS.HARVEST, []);
+            const merged = [...new Set([...localHarvested, ...profile.harvested])];
+            if (merged.length > localHarvested.length) {
+              Storage.set(CONFIG.KEYS.HARVEST, merged);
+            }
+          }
           renderStats();
           renderDashboard();
           console.log('[AppState] 프로필 클라우드 동기화 완료');
@@ -149,18 +157,20 @@ const AppState = (() => {
     Storage.set(CONFIG.KEYS.TOTAL_MIN, totalMin);
 
     // Firestore 비동기 저장
-    if (typeof FireDB !== 'undefined' && FireDB.isReady() && FireDB.getUsername()) {
-      const chalProg = Storage.get('rf_chal_prog', {});
-      const chalWeek = Storage.get('rf_chal_week_app', '');
-      FireDB.saveProfile({
-        xp, water, streak, lastPracticeDate,
-        weeklyXp, weeklyMin, totalMin,
-        seasonXp, seasonWater, seasonMin, seasonKey: getSeasonInfo().seasonKey,
-        chalProg, chalWeek,
-        username: FireDB.getUsername(),
-        updatedAt: new Date().toISOString(),
-      }).catch(e => console.warn('[AppState] saveProfile 실패:', e));
-    }
+if (typeof FireDB !== 'undefined' && FireDB.isReady() && FireDB.getUsername()) {
+  const chalProg = Storage.get('rf_chal_prog', {});
+  const chalWeek = Storage.get('rf_chal_week_app', '');
+  const harvested = Storage.get(CONFIG.KEYS.HARVEST, []);
+  FireDB.saveProfile({
+    xp, water, streak, lastPracticeDate,
+    weeklyXp, weeklyMin, totalMin,
+    seasonXp, seasonWater, seasonMin, seasonKey: getSeasonInfo().seasonKey,
+    chalProg, chalWeek,
+    harvested,
+    username: FireDB.getUsername(),
+    updatedAt: new Date().toISOString(),
+  }).catch(e => console.warn('[AppState] saveProfile 실패:', e));
+}
   }
 
   function addXP(amount) {
@@ -170,12 +180,13 @@ const AppState = (() => {
     weeklyXp[new Date().getDay()] = (weeklyXp[new Date().getDay()] || 0) + amount;
     saveAll(); renderStats();
   }
-  function addWater() {
-    water++;
-    seasonWater++;
-    Storage.set('rf_season_water', seasonWater);
-    saveAll(); renderStats(); checkHarvest();
-  }
+function addWater() {
+  water++;
+  seasonWater++;
+  Storage.set('rf_season_water', seasonWater);
+  checkHarvest(); // ← saveAll 전에 먼저 체크 (새 수확 항목이 profile에 포함되도록)
+  saveAll(); renderStats();
+}
     function _logDateStr(d) {
     return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
   }
