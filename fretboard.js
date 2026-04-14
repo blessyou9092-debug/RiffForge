@@ -223,8 +223,8 @@ const Fretboard = (() => {
               const ri = CONFIG.NOTES.indexOf(rootNote);
               const ni = CONFIG.NOTES.indexOf(note);
               const semi = (ni - ri + 12) % 12;
-              const deg  = ints.indexOf(semi) + 1;
-              label = deg > 0 ? String(deg) : note;
+const SEMI_LBL = { 0:'R', 1:'♭2', 2:'2', 3:'♭3', 4:'3', 5:'4', 6:'♭5', 7:'5', 8:'♭6', 9:'6', 10:'♭7', 11:'7' };
+label = ints.includes(semi) ? (SEMI_LBL[semi] || note) : note;
             }
           }
           const txt = el('text', {
