@@ -2469,9 +2469,10 @@ const ReferenceUI = (() => {
   };
 
   // v9 PENTA_POS_OFFSETS (5A줄 루트 기준 창 시작 오프셋)
+// 변경 후 (major와 동일한 창 오프셋 — 박스 경계는 스케일 타입 무관)
 const PENTA_POS_OFFSETS = {
   major: [0, 2, 4, 7, 9],
-  minor: [0, 3, 5, 7, 10],
+  minor: [0, 2, 4, 7, 9],
 };
 
   const CAGED_NAMES = {
@@ -2496,9 +2497,8 @@ const PENTA_POS_OFFSETS = {
     const rootSemi = KEY_SEMITONES[rootNote] || 0;
     const intervals = PENTA_INTERVALS[mode];
     // 5A줄(v9 si=4)의 루트 프렛: A=9(MIDI mod12) 기준
-const r6E = (rootSemi - 4 + 12) % 12;
+const r6E = (rootSemi - 4 + 12) % 12;  // 6E줄 기준 (A키 → 5, E키 → 0)
 const offsets = PENTA_POS_OFFSETS[mode];
-
 return offsets.map((off, pi) => {
   let posStart = r6E + off;
       while (posStart < 0) posStart += 12;
@@ -2708,17 +2708,22 @@ const roleColors = ['bg-orange-500', 'bg-sky-200', 'bg-sky-400', 'bg-blue-500', 
     const positions = _getPentaPositions(rootNote, pentaMode);
     const box = positions.find(b => b.pos === pos);
 
-    const noteColorFn = (fret, sIdx, note, _role) => {
-      const inZone = box ? (fret >= box.start && fret <= box.end) : false;
-      const isRoot = note === rootNote;
-      return {
-fill: inZone ? (isRoot ? '#f97316' : '#60a5fa') : '#d1d5db',
-stroke: inZone ? (isRoot ? '#c2410c' : '#2563eb') : '#9ca3af',
-        textFill: inZone ? '#fff' : '#9ca3af',
-        dotR: inZone && isRoot ? 11 : 8,
-        opacity: inZone ? 1 : 0.18, label: note,
-      };
-    };
+const noteColorFn = (fret, sIdx, note, _role) => {
+  const inZone = box ? (fret >= box.start && fret <= box.end) : false;
+  const isRoot = note === rootNote;
+  const semi = (CONFIG.NOTES.indexOf(note) - CONFIG.NOTES.indexOf(rootNote) + 12) % 12;
+  const isLight = semi === 2 || semi === 8 || semi === 9; // 2도, b6도, 6도
+  const activeFill   = isRoot ? '#f97316' : isLight ? '#bae6fd' : '#60a5fa';
+  const activeStroke = isRoot ? '#c2410c' : isLight ? '#0284c7' : '#2563eb';
+  const activeText   = isRoot ? '#fff'    : isLight ? '#0c4a6e' : '#fff';
+  return {
+    fill: inZone ? activeFill : '#d1d5db',
+    stroke: inZone ? activeStroke : '#9ca3af',
+    textFill: inZone ? activeText : '#9ca3af',
+    dotR: inZone && isRoot ? 11 : 8,
+    opacity: inZone ? 1 : 0.18, label: note,
+  };
+};
     Fretboard.updateRef({ startFret: 0, endFret: 17, scaleName, rootNote, noteColorFn });
   }
 
