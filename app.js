@@ -2506,63 +2506,41 @@ const PENTA_POS_OFFSETS = {
    */
 function _getPentaPositions(rootNote, mode) {
   const rootSemi = KEY_SEMITONES[rootNote] || 0;
+  // 6번줄(E, open=4semitone) 위 루트 프렛
+  const r6E = (rootSemi - 4 + 12) % 12;
 
-  // 각 포지션의 줄별 음 간격 패턴 (v9 기준: si=0은 1번줄 e, si=5는 6번줄 E)
-  // [낮은프렛오프셋, 높은프렛오프셋] — 루트 프렛 기준 상대값
+  // 배열 인덱스 = v9 si (0=1번줄e, 1=2번줄B, 2=3번줄G, 3=4번줄D, 4=5번줄A, 5=6번줄E)
+  // 각 항목: [낮은프렛 오프셋, 높은프렛 오프셋]  — 6번줄 루트 프렛 기준
   const SHAPES = {
     minor: [
-      // Pos 1: 루트는 6번줄과 1번줄
-      [ [0,3],[0,3],[0,2],[0,2],[0,3],[0,3] ],
-      // Pos 2
-      [ [2,5],[2,5],[2,4],[2,4],[2,5],[2,5] ],
-      // Pos 3
-      [ [3,5],[3,6],[3,5],[3,5],[3,6],[3,5] ],
-      // Pos 4
-      [ [5,7],[5,7],[5,7],[5,7],[5,8],[5,7] ],  // ← 수정됨
-      // Pos 5
-      [ [7,10],[7,10],[7,9],[7,9],[7,10],[7,10] ],
+      [[0,3],[0,3],[0,2],[0,2],[0,2],[0,3]],          // Pos 1
+      [[3,5],[3,5],[2,4],[2,5],[2,5],[3,5]],          // Pos 2
+      [[5,7],[5,8],[4,7],[5,7],[5,7],[5,7]],          // Pos 3
+      [[7,10],[8,10],[7,9],[7,9],[7,10],[7,10]],      // Pos 4
+      [[10,12],[10,12],[9,12],[9,12],[10,12],[10,12]], // Pos 5
     ],
     major: [
-      // Pos 1: 루트는 6번줄과 1번줄
-      [ [0,2],[0,2],[0,2],[0,2],[0,2],[0,2] ],  // ← 수정됨
-      // Pos 2
-      [ [2,4],[2,5],[2,4],[2,4],[2,5],[2,4] ],
-      // Pos 3
-      [ [4,7],[5,7],[4,7],[4,7],[5,7],[4,7] ],
-      // Pos 4
-      [ [7,9],[7,9],[7,9],[7,9],[7,9],[7,9] ],
-      // Pos 5
-      [ [9,12],[9,12],[9,11],[9,11],[9,12],[9,12] ],
+      [[0,2],[0,2],[-1,1],[-1,2],[-1,2],[0,2]],      // Pos 1
+      [[2,4],[2,5],[1,4],[2,4],[2,4],[2,4]],          // Pos 2
+      [[4,7],[5,7],[4,6],[4,6],[4,7],[4,7]],          // Pos 3
+      [[7,9],[7,9],[6,9],[6,9],[7,9],[7,9]],          // Pos 4
+      [[9,12],[9,12],[9,11],[9,11],[9,11],[9,12]],    // Pos 5
     ],
   };
 
-  const shapes = SHAPES[mode];
-  // 5A줄(v9 si=4, rfSIdx=1) 루트 프렛 기준
-  const r5A = (rootSemi - 9 + 12) % 12;
+  const shapes = SHAPES[mode] || SHAPES.minor;
 
-  return shapes.map((shape, pi) => {
-    // 포지션별 5A줄 루트 프렛
-    const PENTA_POS_OFFSETS_5A = {
-      minor: [0, 3, 5, 7, 10],
-      major: [0, 2, 4, 7, 9],
-    };
-    let base5A = r5A + PENTA_POS_OFFSETS_5A[mode][pi];
-    while (base5A > 17) base5A -= 12;
-    while (base5A < 0)  base5A += 12;
-
+  return shapes.map((stringOffsets, pi) => {
     const allNotes = [];
-    // shape: si=0(1번줄e) ~ si=5(6번줄E), 오프셋은 5A줄 기준
     for (let si = 0; si < 6; si++) {
-      shape[si].forEach(off => {
-        // 5A줄 기준 오프셋을 각 줄에 맞게 보정
-        const A_OFFSET = [0, -5, -5, -5, -4, -5]; // si별 A줄 대비 조율 차이
-        let fret = base5A + off + A_OFFSET[si];
+      const [offLo, offHi] = stringOffsets[si];
+      [offLo, offHi].forEach(off => {
+        let fret = r6E + off;
         while (fret < 0)  fret += 12;
         while (fret > 17) fret -= 12;
         allNotes.push({ si, fret, interval: off });
       });
     }
-
     const frets = allNotes.map(n => n.fret);
     return {
       pos: pi + 1,
@@ -2572,6 +2550,7 @@ function _getPentaPositions(rootNote, mode) {
     };
   });
 }
+
 
 
   /**
