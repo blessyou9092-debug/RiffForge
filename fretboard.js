@@ -190,10 +190,9 @@ const Fretboard = (() => {
           const isRoot      = note === rootNote;
           const isChordRoot = chordRoot && note === chordRoot && !isRoot;
           const isThird     = !chordRoot && note === thirdNote && !isRoot;
-          if (isRoot)           { fill='#f59e0b'; stroke='#d97706'; textFill='#fff'; dotR=10; }
-          else if (isChordRoot) { fill='#ef4444'; stroke='#dc2626'; textFill='#fff'; dotR=11; }
-          else if (isThird)     { fill='#a3e635'; stroke='#65a30d'; textFill='#1a2e05'; }
-          else                  { fill='#fb923c'; stroke='#ea580c'; textFill='#fff'; }
+if (isRoot)           { fill='#f97316'; stroke='#c2410c'; textFill='#fff'; dotR=10; }
+else if (isChordRoot) { fill='#ef4444'; stroke='#dc2626'; textFill='#fff'; dotR=11; }
+else                  { fill='#60a5fa'; stroke='#2563eb'; textFill='#fff'; }
         }
 
         // X 좌표
