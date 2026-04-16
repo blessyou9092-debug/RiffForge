@@ -874,10 +874,13 @@
             <div class="flex justify-between items-center mt-2">
               <div class="flex items-center gap-2">
                 <span id="board-char-count" class="text-xs text-gray-300">0 / 300</span>
-                <button onclick="CrewBoard.previewPractice()" id="board-practice-badge"
-                  class="hidden text-xs bg-orange-50 text-orange-500 font-bold px-2 py-0.5 rounded-full hover:bg-orange-100 transition-all">
-                  📋 연습 인증 첨부됨
-                </button>
+                <label id="board-practice-badge" class="hidden items-center gap-1.5 cursor-pointer select-none">
+                  <input type="checkbox" id="board-attach-toggle" checked
+                    class="w-3.5 h-3.5 accent-orange-400 cursor-pointer" />
+                  <span class="text-xs text-orange-500 font-bold">📋 연습 인증</span>
+                  <button type="button" onclick="CrewBoard.previewPractice()"
+                    class="text-[10px] text-orange-300 hover:text-orange-500 transition-colors">미리보기</button>
+                </label>
               </div>
               <button onclick="CrewBoard.addPost()"
                 class="px-4 py-2 bg-gradient-to-r from-amber-500 to-orange-500 text-white text-sm font-bold rounded-xl hover:from-amber-600 hover:to-orange-600 transition-all shadow-sm">
