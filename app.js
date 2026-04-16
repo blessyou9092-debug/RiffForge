@@ -807,6 +807,133 @@ function addWater() {
     updateRanking,
   };
 })();
+// ═══════════════════════════════════════════════════════════════════════════
+// WeeklyReport: 주간 연습 리포트 팝업
+// ═══════════════════════════════════════════════════════════════════════════
+const WeeklyReport = (() => {
+  function _getWeekDates() {
+    const today = new Date();
+    const dayOfWeek = today.getDay();
+    const DAY_LABELS = ['일', '월', '화', '수', '목', '금', '토'];
+    return Array.from({ length: 7 }, (_, i) => {
+      const d = new Date(today);
+      d.setDate(today.getDate() - dayOfWeek + i);
+      const y = d.getFullYear();
+      const m = String(d.getMonth() + 1).padStart(2, '0');
+      const dd = String(d.getDate()).padStart(2, '0');
+      return {
+        dateStr: `${y}-${m}-${dd}`,
+        dayLabel: DAY_LABELS[i],
+        isToday: i === dayOfWeek,
+        isFuture: i > dayOfWeek,
+      };
+    });
+  }
+
+  function _buildReport() {
+    const dates = _getWeekDates();
+    let totalMin = 0, practicedDays = 0;
+    const byType = { warmup: 0, theory: 0, practical: 0 };
+    dates.forEach(({ dateStr, isFuture }) => {
+      if (isFuture) return;
+      const log = Storage.getLog(dateStr);
+      if (!log) return;
+      if ((log.totalMin || 0) > 0) practicedDays++;
+      totalMin += log.totalMin || 0;
+      (log.sessions || []).forEach(s => {
+        if (s.type in byType) byType[s.type] += s.minutes || 0;
+      });
+    });
+    return { dates, totalMin, practicedDays, byType };
+  }
+
+  function _render({ dates, totalMin, practicedDays, byType }) {
+    const TYPE_INFO = {
+      warmup:    { label: '🔥 워밍업', color: 'bg-amber-400', textColor: 'text-amber-600' },
+      theory:    { label: '🎵 이론',   color: 'bg-blue-400',  textColor: 'text-blue-600'  },
+      practical: { label: '🎸 실전',   color: 'bg-green-400', textColor: 'text-green-600' },
+    };
+    const TYPE_NAMES = { warmup: '워밍업', theory: '이론', practical: '실전' };
+    const sessionTotal = byType.warmup + byType.theory + byType.practical;
+
+    // ── 인사이트 메시지 ─────────────────────────────────────────────────────
+    let insightMsg;
+    if (totalMin === 0) {
+      insightMsg = '아직 이번 주 연습 기록이 없어요. 오늘부터 시작해봐요! 🎸';
+    } else {
+      const maxType = Object.entries(byType).reduce((a, b) => b[1] > a[1] ? b : a);
+      const focusedName = TYPE_NAMES[maxType[0]];
+      const theoryRatio = sessionTotal > 0 ? (byType.theory / sessionTotal) * 100 : 0;
+      insightMsg = `이번 주는 <strong class="text-amber-700">${focusedName}</strong> 연습에 가장 집중했어요.`;
+      if (theoryRatio < 15) insightMsg += ' 이론 연습을 더 추가해보세요!';
+    }
+
+    // ── 요일별 도트 ─────────────────────────────────────────────────────────
+    const dayDots = dates.map(({ dateStr, dayLabel, isToday, isFuture }) => {
+      const log = Storage.getLog(dateStr);
+      const min = log?.totalMin || 0;
+      const col = isFuture ? 'bg-gray-100'
+        : min >= 30 ? 'bg-amber-400' : min > 0 ? 'bg-amber-200' : 'bg-gray-200';
+      return `<div class="flex flex-col items-center gap-1">
+        <div class="w-8 h-8 rounded-lg ${col}${isToday ? ' ring-2 ring-orange-400' : ''}"></div>
+        <span class="text-[10px] ${isToday ? 'font-black text-amber-600' : 'text-gray-400'}">${dayLabel}</span>
+        <span class="text-[9px] text-gray-400">${isFuture ? '—' : (min > 0 ? min + '분' : '·')}</span>
+      </div>`;
+    }).join('');
+
+    // ── 세션 비중 바 차트 ───────────────────────────────────────────────────
+    const barChart = Object.entries(byType).map(([type, min]) => {
+      const info = TYPE_INFO[type];
+      const pct = sessionTotal > 0 ? Math.round((min / sessionTotal) * 100) : 0;
+      const isLow = type === 'theory' && sessionTotal > 0 && pct < 15;
+      return `<div class="flex items-center gap-2 mb-2">
+        <span class="text-xs w-14 shrink-0 ${info.textColor} font-semibold">${info.label}</span>
+        <div class="flex-1 bg-gray-100 rounded-full h-2.5 overflow-hidden">
+          <div class="${info.color} h-2.5 rounded-full" style="width:${pct > 0 ? Math.max(pct, 3) : 0}%"></div>
+        </div>
+        <span class="text-xs text-gray-400 w-20 text-right shrink-0">${min}분 (${pct}%)${isLow ? ' ⚠️' : ''}</span>
+      </div>`;
+    }).join('');
+
+    return `
+      <div class="bg-amber-50 border border-amber-100 rounded-xl p-3 mb-4 text-sm text-amber-900 leading-relaxed">
+        ${insightMsg}
+      </div>
+      <div class="grid grid-cols-2 gap-2 mb-4">
+        <div class="bg-gray-50 rounded-xl p-3 text-center">
+          <p class="text-2xl font-black text-amber-600">${totalMin}<span class="text-sm font-medium text-gray-500">분</span></p>
+          <p class="text-xs text-gray-400 mt-0.5">이번 주 총 연습</p>
+        </div>
+        <div class="bg-gray-50 rounded-xl p-3 text-center">
+          <p class="text-2xl font-black text-orange-500">${practicedDays}<span class="text-sm font-medium text-gray-500">/7일</span></p>
+          <p class="text-xs text-gray-400 mt-0.5">연습한 날</p>
+        </div>
+      </div>
+      <div class="flex justify-between mb-4 px-1">${dayDots}</div>
+      <div>
+        <p class="text-[10px] font-bold text-gray-400 uppercase tracking-wide mb-2">세션 비중</p>
+        ${sessionTotal > 0 ? barChart : '<p class="text-xs text-gray-400">세션 기록이 없어요.</p>'}
+      </div>`;
+  }
+
+  function open() {
+    const modal = document.getElementById('weekly-report-modal');
+    if (!modal) return;
+    const content = document.getElementById('weekly-report-content');
+    if (content) content.innerHTML = _render(_buildReport());
+    modal.classList.remove('hidden');
+    modal.classList.add('flex');
+  }
+
+  function close() {
+    const modal = document.getElementById('weekly-report-modal');
+    if (!modal) return;
+    modal.classList.add('hidden');
+    modal.classList.remove('flex');
+  }
+
+  return { open, close };
+})();
 
 
 // ═══════════════════════════════════════════════════════════════════════════
