@@ -618,10 +618,13 @@
 
           <!-- 하단 3열 -->
           <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div class="bg-white rounded-2xl p-4 shadow-sm border border-amber-100">
-              <h3 class="font-bold text-gray-700 mb-3 text-sm">📊 주간 연습 시간</h3>
-              <div id="week-chart" class="flex gap-1 items-end"></div>
-            </div>
+<div class="bg-white rounded-2xl p-4 shadow-sm border border-amber-100 cursor-pointer hover:border-amber-300 hover:shadow-md transition-all group" onclick="WeeklyReport.open()">
+  <h3 class="font-bold text-gray-700 mb-3 text-sm flex items-center justify-between">
+    📊 주간 연습 시간
+    <span class="text-[10px] text-gray-300 group-hover:text-amber-400 transition-colors">리포트 보기 →</span>
+  </h3>
+  <div id="week-chart" class="flex gap-1 items-end"></div>
+</div>
             <div class="bg-white rounded-2xl p-4 shadow-sm border border-amber-100">
               <h3 class="font-bold text-gray-700 mb-2 text-sm">🗓 이달 연습</h3>
               <div id="month-heatmap" class="flex flex-wrap gap-1"></div>
@@ -2238,6 +2241,16 @@ function cofSelectKey(root, type, segEl) {
       </button>
     </div>
   </div>
+  <!-- 주간 연습 리포트 모달 -->
+<div id="weekly-report-modal" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/40 backdrop-blur-sm" onclick="WeeklyReport.close()">
+  <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md mx-4 p-6 max-h-[85vh] overflow-y-auto" onclick="event.stopPropagation()">
+    <div class="flex items-center justify-between mb-4">
+      <h3 class="text-base font-black text-gray-800">📊 주간 연습 리포트</h3>
+      <button onclick="WeeklyReport.close()" class="text-gray-400 hover:text-gray-600 text-xl leading-none">✕</button>
+    </div>
+    <div id="weekly-report-content"><!-- JS 렌더링 --></div>
+  </div>
+</div>
 </body>
 
 </html>
