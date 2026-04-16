@@ -50,6 +50,7 @@ const Storage = {
 const PracticeBuilder = (() => {
   let sessions = [];   // 현재 편집 중인 세션 목록
   let editingDate = getTodayStr();
+  let _routinePresets = [];
 
   // ── 날짜 유틸 ────────────────────────────────────────────────────
   function getTodayStr() {
@@ -239,6 +240,189 @@ function markSessionComplete(id) {
     renderSessions();
     showToast('🗑️ 모든 세션이 삭제되었어요.', 'info');
   }
+// ── 과거 루틴 불러오기 ───────────────────────────────────────────────
+function loadRoutineFrom(type) {
+  const d = new Date();
+  if (type === 'yesterday') d.setDate(d.getDate() - 1);
+  else if (type === 'lastweek') d.setDate(d.getDate() - 7);
+  const targetDate = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+  const log = Storage.getLog(targetDate);
+  if (!log || !log.sessions?.length) {
+    showToast(`${type === 'yesterday' ? '어제' : '지난주 같은 요일'} 기록이 없어요`, 'warning');
+    return;
+  }
+  const label = type === 'yesterday' ? '어제' : '지난주 같은 요일';
+  const doLoad = () => {
+    sessions = log.sessions.map(s => ({
+      ...s,
+      id: newId(),
+      repsVisible: false,
+      reps: Array(s.repsCount || 5).fill(false),
+      completed: false,
+    }));
+    renderSessions();
+    showToast(`📅 ${label} 루틴을 불러왔어요 (${sessions.length}개 세션)`, 'success');
+  };
+  if (sessions.length > 0) {
+    if (!confirm(`현재 세션 ${sessions.length}개가 있어요.\n${label} 루틴으로 교체할까요?`)) return;
+  }
+  doLoad();
+}
+
+// ── 루틴 프리셋 내부 유틸 ───────────────────────────────────────────
+function _loadRoutinePresets() {
+  try { _routinePresets = JSON.parse(localStorage.getItem('rf_routine_presets') || '[]'); }
+  catch { _routinePresets = []; }
+}
+function _saveRoutinePresets() {
+  localStorage.setItem('rf_routine_presets', JSON.stringify(_routinePresets));
+}
+function _renderRoutinePresetsList() {
+  if (_routinePresets.length === 0) {
+    return `<p class="text-center text-sm text-gray-400 py-4">저장된 프리셋이 없어요.<br>현재 루틴을 프리셋으로 저장해보세요!</p>`;
+  }
+  return _routinePresets.map(p => `
+    <div class="flex items-center gap-2 p-2.5 rounded-xl border border-gray-100 bg-gray-50 hover:border-amber-200 hover:bg-amber-50 transition-colors">
+      <div class="flex-1 min-w-0 cursor-pointer" onclick="PracticeBuilder.applyRoutinePreset(${p.id})">
+        <p id="routine-preset-name-${p.id}" class="text-sm font-bold text-gray-700 truncate">${p.name}</p>
+        <p class="text-[10px] text-gray-400">${p.sessions.length}개 세션 · ${p.totalMin}분</p>
+      </div>
+      <button onclick="PracticeBuilder.startEditRoutinePresetName(${p.id})"
+        class="w-6 h-6 shrink-0 bg-blue-100 hover:bg-blue-200 text-blue-500 rounded-full flex items-center justify-center text-[10px] transition-colors">✏</button>
+      <button onclick="PracticeBuilder.deleteRoutinePreset(${p.id})"
+        class="w-6 h-6 shrink-0 bg-red-100 hover:bg-red-200 text-red-400 rounded-full flex items-center justify-center text-[10px] transition-colors">✕</button>
+    </div>`
+  ).join('');
+}
+function _refreshRoutinePresetsList() {
+  const el = document.getElementById('routine-presets-list');
+  if (el) el.innerHTML = _renderRoutinePresetsList();
+}
+
+// ── 루틴 프리셋 저장 ──────────────────────────────────────────────────
+function openSaveRoutinePresetModal() {
+  if (sessions.length === 0) { showToast('저장할 세션이 없어요', 'warning'); return; }
+  const existing = document.getElementById('save-routine-modal');
+  if (existing) existing.remove();
+  const modal = document.createElement('div');
+  modal.id = 'save-routine-modal';
+  modal.className = 'fixed inset-0 z-50 flex items-center justify-center p-4';
+  modal.style.background = 'rgba(0,0,0,0.45)';
+  modal.innerHTML = `
+    <div class="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-5">
+      <p class="font-black text-gray-800 text-base mb-4">💾 루틴 프리셋 저장</p>
+      <div class="space-y-3">
+        <div>
+          <label class="text-xs font-bold text-gray-500 block mb-1">프리셋 이름</label>
+          <input id="routine-preset-name-input" type="text" placeholder="예: 출근 전 20분 루틴" maxlength="20"
+            class="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-amber-400" />
+        </div>
+        <p class="text-[10px] text-gray-400">세션 ${sessions.length}개 · 총 ${getTotalMinutes()}분 구성이 저장됩니다</p>
+      </div>
+      <div class="flex gap-2 mt-4">
+        <button onclick="PracticeBuilder.confirmSaveRoutinePreset()"
+          class="flex-1 py-2.5 bg-amber-500 hover:bg-amber-600 text-white font-bold text-sm rounded-xl transition-colors">저장</button>
+        <button onclick="document.getElementById('save-routine-modal').remove()"
+          class="px-4 py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-600 font-bold text-sm rounded-xl">취소</button>
+      </div>
+    </div>`;
+  modal.addEventListener('click', e => { if (e.target === modal) modal.remove(); });
+  document.body.appendChild(modal);
+  document.getElementById('routine-preset-name-input')?.focus();
+}
+
+function confirmSaveRoutinePreset() {
+  const name = (document.getElementById('routine-preset-name-input')?.value || '').trim();
+  if (!name) { showToast('프리셋 이름을 입력해주세요', 'warning'); return; }
+  _loadRoutinePresets();
+  if (_routinePresets.length >= 8) { showToast('프리셋은 최대 8개까지 저장할 수 있어요', 'warning'); return; }
+  _routinePresets.push({
+    id: Date.now(), name,
+    sessions: sessions.map(s => ({
+      type: s.type, name: s.name, detail: s.detail,
+      minutes: s.minutes, repsCount: s.repsCount || 5,
+    })),
+    totalMin: getTotalMinutes(),
+    savedAt: new Date().toISOString(),
+  });
+  _saveRoutinePresets();
+  document.getElementById('save-routine-modal')?.remove();
+  showToast(`✅ "${name}" 프리셋이 저장되었습니다!`, 'success');
+}
+
+// ── 루틴 프리셋 목록/적용/수정/삭제 ────────────────────────────────
+function openRoutinePresetsModal() {
+  _loadRoutinePresets();
+  const existing = document.getElementById('routine-presets-modal');
+  if (existing) existing.remove();
+  const modal = document.createElement('div');
+  modal.id = 'routine-presets-modal';
+  modal.className = 'fixed inset-0 z-50 flex items-center justify-center p-4';
+  modal.style.background = 'rgba(0,0,0,0.45)';
+  modal.innerHTML = `
+    <div class="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-5">
+      <p class="font-black text-gray-800 text-base mb-4">📋 루틴 프리셋</p>
+      <div id="routine-presets-list" class="space-y-2 max-h-72 overflow-y-auto mb-4">
+        ${_renderRoutinePresetsList()}
+      </div>
+      <button onclick="document.getElementById('routine-presets-modal').remove()"
+        class="w-full py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-600 font-bold text-sm rounded-xl">닫기</button>
+    </div>`;
+  modal.addEventListener('click', e => { if (e.target === modal) modal.remove(); });
+  document.body.appendChild(modal);
+}
+
+function applyRoutinePreset(id) {
+  _loadRoutinePresets();
+  const p = _routinePresets.find(x => x.id === id);
+  if (!p) return;
+  const doApply = () => {
+    sessions = p.sessions.map(s =>
+      createSession(s.type, { name: s.name, detail: s.detail, defaultMin: s.minutes })
+    );
+    renderSessions();
+    document.getElementById('routine-presets-modal')?.remove();
+    showToast(`📋 "${p.name}" 프리셋을 적용했어요!`, 'success');
+  };
+  if (sessions.length > 0) {
+    if (!confirm(`현재 세션 ${sessions.length}개가 있어요.\n"${p.name}" 프리셋으로 교체할까요?`)) return;
+  }
+  doApply();
+}
+
+function startEditRoutinePresetName(id) {
+  const nameEl = document.getElementById(`routine-preset-name-${id}`);
+  if (!nameEl) return;
+  _loadRoutinePresets();
+  const p = _routinePresets.find(x => x.id === id);
+  if (!p) return;
+  nameEl.outerHTML = `<input id="edit-routine-name-${id}" type="text"
+    value="${p.name.replace(/"/g,'&quot;')}" maxlength="20"
+    onblur="PracticeBuilder.finishEditRoutinePresetName(${id}, this.value)"
+    onkeydown="if(event.key==='Enter')this.blur(); if(event.key==='Escape'){this.dataset.cancel='1';this.blur();}"
+    class="text-sm font-bold text-gray-700 border-b border-amber-400 bg-transparent focus:outline-none w-full" />`;
+  document.getElementById(`edit-routine-name-${id}`)?.focus();
+  document.getElementById(`edit-routine-name-${id}`)?.select();
+}
+
+function finishEditRoutinePresetName(id, newName) {
+  const input = document.getElementById(`edit-routine-name-${id}`);
+  if (input?.dataset.cancel === '1') { _refreshRoutinePresetsList(); return; }
+  _loadRoutinePresets();
+  const p = _routinePresets.find(x => x.id === id);
+  if (p && newName?.trim()) { p.name = newName.trim(); _saveRoutinePresets(); }
+  _refreshRoutinePresetsList();
+}
+
+function deleteRoutinePreset(id) {
+  _loadRoutinePresets();
+  const p = _routinePresets.find(x => x.id === id);
+  if (!p || !confirm(`"${p.name}" 프리셋을 삭제할까요?`)) return;
+  _routinePresets = _routinePresets.filter(x => x.id !== id);
+  _saveRoutinePresets();
+  _refreshRoutinePresetsList();
+  showToast('프리셋이 삭제되었습니다', 'info');
+}
 
   function savePractice() {
     const totalMin = getTotalMinutes();
@@ -306,8 +490,10 @@ function markSessionComplete(id) {
   .catch(e => console.warn('[Ranking] 업데이트 실패:', e));
     if (typeof ChallengeTracker !== 'undefined') ChallengeTracker.recalc();
     AppState.renderDashboard();
+    AppState.renderWeeklyChallenges?.();
     CalendarView.render();
     return log;
+
   }
   function renderIconPicker(dateStr) {
     const el = document.getElementById('builder-icon-picker');
@@ -780,7 +966,12 @@ function markSessionComplete(id) {
     setEditingDate(d) { editingDate = d; },
     rollChromatic, rollSpider, rollKeys, addSongSession,
     clearAllSessions,
+    loadRoutineFrom,
+    openSaveRoutinePresetModal, confirmSaveRoutinePreset,
+    openRoutinePresetsModal, applyRoutinePreset,
+    startEditRoutinePresetName, finishEditRoutinePresetName, deleteRoutinePreset,
   };
+
 
 })();
 
