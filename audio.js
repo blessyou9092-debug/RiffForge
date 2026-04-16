@@ -39,6 +39,9 @@ const Metronome = (() => {
   let nextNoteTime = 0;
   let timerID = null;
   let onBeatCb = null;
+  let swingAmount = 0;   // 0 = 스트레이트, 0.5~0.67 = 스윙
+  let pendingBpm = null; // 다음 마디 첫 박에 적용될 BPM
+
 
   // ── 박자 패턴 초기화 ─────────────────────────────────────────────
   function initPattern() {
@@ -132,10 +135,20 @@ const Metronome = (() => {
   function scheduler() {
     const c = AudioEngine.getCtx();
     const perBeat = getPerBeat();
-    const secPerSub = (60.0 / bpm) / perBeat;
+    let secPerBeat = 60.0 / bpm;
+    let secPerSub = secPerBeat / perBeat;
 
     while (nextNoteTime < c.currentTime + 0.12) {
       const isMain = currentSub === 0;
+
+      // 마디 첫 박에서 pendingBpm 적용 (싱크 버그 & 4마디 버그 수정)
+      if (isMain && currentBeat === 0 && pendingBpm !== null) {
+        bpm = pendingBpm;
+        pendingBpm = null;
+        secPerBeat = 60.0 / bpm;
+        secPerSub = secPerBeat / perBeat;
+      }
+
       if (isMain) {
         const mode = beatPattern[currentBeat % beatPattern.length] || 'normal';
         playTick(nextNoteTime, mode, false);
@@ -144,52 +157,24 @@ const Metronome = (() => {
         playTick(nextNoteTime, 'normal', true);
       }
 
-      nextNoteTime += secPerSub;
+      // 스윙: 8분음표·16분음표 세분화 시 홀짝 교대 타이밍 적용
+      let advance;
+      if (swingAmount > 0 && perBeat >= 2 && perBeat !== 3) {
+        const secPer2Subs = secPerSub * 2;
+        advance = (currentSub % 2 === 0)
+          ? secPer2Subs * swingAmount
+          : secPer2Subs * (1 - swingAmount);
+      } else {
+        advance = secPerSub;
+      }
+
+      nextNoteTime += advance;
       currentSub = (currentSub + 1) % perBeat;
       if (currentSub === 0) currentBeat = (currentBeat + 1) % timeSig.beats;
     }
     timerID = setTimeout(scheduler, 25);
   }
 
-  function start() {
-    if (isPlaying) return;
-    const c = AudioEngine.getCtx();
-    isPlaying = true;
-    currentBeat = 0;
-    currentSub = 0;
-    nextNoteTime = c.currentTime + 0.05;
-    scheduler();
-  }
-  function stop() {
-    isPlaying = false;
-    clearTimeout(timerID);
-    timerID = null;
-  }
-  function toggle() { isPlaying ? stop() : start(); return isPlaying; }
-
-  function setBpm(val) {
-    bpm = Math.max(CONFIG.METRONOME.MIN_BPM, Math.min(CONFIG.METRONOME.MAX_BPM, parseInt(val) || 80));
-    return bpm;
-  }
-  function adjustBpm(delta) { return setBpm(bpm + delta); }
-  function setTimeSig(sig) { timeSig = sig; initPattern(); }
-  function setSubdiv(id) { subdivId = id; }
-  function setVolume(v) { volume = Math.max(0, Math.min(2.5, parseFloat(v))); }
-  function setSoundType(id) { soundTypeId = id; }
-  function onBeat(cb) { onBeatCb = cb; }
-
-  initPattern();
-
-  return {
-    start, stop, toggle, setBpm, adjustBpm, setTimeSig, setSubdiv, setVolume, setSoundType,
-    cycleBeat, initPattern, onBeat,
-    getBpm: () => bpm,
-    getVolume: () => volume,
-    getIsPlaying: () => isPlaying,
-    getBeatPattern: () => [...beatPattern],
-    getTimeSig: () => timeSig,
-  };
-})();
 
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -211,6 +196,8 @@ const BackingEngine = (() => {
   let beatIdx = 0;
   let nextNoteTime = 0;
   let onChordChangeCb = null;
+    let swingAmount = 0;
+  let pendingBpm = null;
   let currentBarChord = null;
   let currentBarBassPattern = [];
 
@@ -521,25 +508,51 @@ function playGuitar(freqs, t, dur) {
   const BEATS = 4;
 
   function scheduler() {
-    const secPerStep = (60 / bpm) / (STEPS / BEATS);
+    let baseSecPerStep = (60 / bpm) / (STEPS / BEATS);
     const pattern = DRUM_PATTERNS[genreId] || DRUM_PATTERNS.blues;
 
     while (nextNoteTime < ctx.currentTime + 0.12) {
       const step = beatIdx % STEPS;
 
+      // 마디 첫 스텝에서 pendingBpm 적용
+      if (step === 0 && pendingBpm !== null) {
+        bpm = pendingBpm;
+        pendingBpm = null;
+        baseSecPerStep = (60 / bpm) / (STEPS / BEATS);
+      }
+
       if (pattern.kick[step]) playKick(nextNoteTime);
       if (pattern.snare[step]) playSnare(nextNoteTime);
       if (pattern.hihat[step]) playHihat(nextNoteTime);
 
-      // 코드 전환: 각 마디 첫 스텝
       if (step === 0 && progression.length > 0) {
         currentBarChord = progression[chordIdx % progression.length];
-        const barDur = secPerStep * STEPS;
+        const barDur = baseSecPerStep * STEPS;
         playHarmony(currentBarChord, nextNoteTime, barDur);
         if (onChordChangeCb) onChordChangeCb(chordIdx % progression.length);
         chordIdx++;
         currentBarBassPattern = getBassPatternForChord(currentBarChord);
       }
+
+      if (currentBarChord) {
+        const bn = currentBarBassPattern.find(([s]) => s === step);
+        if (bn) {
+          const [, semi, dur] = bn;
+          const rootMidi = CONFIG.noteToMidi(currentBarChord.root, 2);
+          playBass(CONFIG.midiToHz(rootMidi + semi), nextNoteTime, baseSecPerStep * dur);
+        }
+      }
+
+      // 스윙 타이밍
+      const advance = swingAmount > 0
+        ? baseSecPerStep * 2 * (step % 2 === 0 ? swingAmount : 1 - swingAmount)
+        : baseSecPerStep;
+      nextNoteTime += advance;
+      beatIdx++;
+    }
+    schedID = setTimeout(scheduler, 25);
+  }
+
 
       // 장르별 베이스 리듬 패턴 적용
       if (currentBarChord) {
@@ -557,7 +570,7 @@ function playGuitar(freqs, t, dur) {
     schedID = setTimeout(scheduler, 25);
   }
 
-  function start(prog, genre, bpmVal) {
+   function start(prog, genre, bpmVal, startTime) {
     if (isPlaying) stop();
     ctx = AudioEngine.getCtx();
     masterGain = ctx.createGain();
@@ -571,7 +584,7 @@ function playGuitar(freqs, t, dur) {
     beatIdx = 0;
     currentBarChord = null;
     currentBarBassPattern = [];
-    nextNoteTime = ctx.currentTime + 0.05;
+    nextNoteTime = startTime !== undefined ? startTime : ctx.currentTime + 0.05;
     isPlaying = true;
     scheduler();
   }
@@ -592,14 +605,17 @@ function playGuitar(freqs, t, dur) {
       volumes[type] = Math.max(0, Math.min(1, parseFloat(val)));
   }
 
-  function setBpm(val) { bpm = parseInt(val); }
+  function setBpm(val) { bpm = parseInt(val); pendingBpm = null; }
+  function setPendingBpm(val) { pendingBpm = parseInt(val); }
+  function setSwing(val) { swingAmount = Math.max(0, Math.min(0.67, parseFloat(val) || 0)); }
   function setHarmonyInstrument(id) { harmonyInst = id; }
   function onChordChange(cb) { onChordChangeCb = cb; }
 
   return {
-    start, stop, setBpm, setVolume, setHarmonyInstrument, onChordChange,
+    start, stop, setBpm, setPendingBpm, setSwing, setVolume, setHarmonyInstrument, onChordChange,
     getIsPlaying: () => isPlaying,
   };
+
 })();
 
 
