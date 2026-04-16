@@ -1123,10 +1123,14 @@ const CalendarView = (() => {
     const panel = document.getElementById('calendar-day-detail');
     if (panel) panel.classList.add('hidden');
   }
-  function deleteLog(dateStr) {
+function deleteLog(dateStr) {
     const log = Storage.getLog(dateStr);
     if (!log) return;
     if (!confirm(`${dateStr} 연습 기록을 삭제하시겠습니까?\n\n⚠️ XP·물주기는 유지되며 기록만 삭제됩니다.`)) return;
+
+    // 연습 시간 역산 (랭킹 seasonMin 중복 합산 방지)
+    const prevMin = log.totalMin || 0;
+    if (prevMin > 0 && typeof AppState !== 'undefined') AppState.addTotalMin(-prevMin);
 
     // localStorage + Firestore 삭제
     Storage.deleteLog(dateStr);
@@ -1771,7 +1775,8 @@ function _setProg(prog) {
   }
 
   // ── 달성 감지 → 보상 + 축하 ─────────────────────────────────
-  function _checkAndReward(prog) {
+function _checkAndReward(prog) {
+    _initRewardsIfNeeded(prog);
     const rewarded = _getRewarded();
     _getActiveThree().forEach(c => {
       if ((prog[c.id] || 0) >= c.goal && !rewarded.has(c.id)) {
