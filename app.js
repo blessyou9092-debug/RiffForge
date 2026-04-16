@@ -3170,19 +3170,16 @@ const CrewBoard = (() => {
   }
 
   // ── 연습 인증 텍스트 빌더 ────────────────────────────────────────────────
-  function _buildPracticeSummary() {
+function _buildPracticeSummary() {
     const log = Storage.getLog(getTodayStr());
     if (!log || !log.totalMin) return null;
-    const lines = [`⏱️ 오늘 연습 시간: ${log.totalMin}분`];
-    if (log.sessions?.length)
-      lines.push(`🎯 연습 항목:\n${log.sessions.map(s =>
-        `  • ${s.name || s.type || '세션'}${s.bpm ? ` BPM ${s.bpm}` : ''}${s.memo ? ` — ${s.memo}` : ''}`
-      ).join('\n')}`);
-    if (log.goal) lines.push(`📌 목표: ${log.goal}`);
-    if (log.achievement) lines.push(`✅ 성취: ${log.achievement}`);
-    if (log.note) lines.push(`📝 메모: ${log.note}`);
-    return lines.join('\n');
+    const sessionCount = log.sessions?.length || 0;
+    const allDone = log.allCompleted;
+    const line1 = `⏱️ ${log.totalMin}분 연습${sessionCount > 0 ? ` | 🎯 ${sessionCount}개 세션${allDone ? ' 전체 완료 ✅' : ''}` : ''}`;
+    const line2 = log.achievement ? `💬 ${log.achievement}` : log.goal ? `🎯 목표: ${log.goal}` : null;
+    return line2 ? `${line1}\n${line2}` : line1;
   }
+
 
   // ── 글 쓰기 ──────────────────────────────────────────────────────────────
   async function addPost() {
@@ -3190,15 +3187,16 @@ const CrewBoard = (() => {
     const content = ta?.value.trim();
     if (!content) { showToast('내용을 입력해 주세요.', 'warning'); return; }
 
-    const todayMin = AppState.getTodayMin();
-    const summary = _buildPracticeSummary();
+     const todayMin = AppState.getTodayMin();
+    const attachOn = document.getElementById('board-attach-toggle')?.checked ?? true;
+    const summary = attachOn ? _buildPracticeSummary() : null;
     const post = {
       id: _newId(),
       authorId: AppState.getUserId(),
       authorName: Storage.get(CONFIG.KEYS.USERNAME, '') || '익명',
       authorAvatar: Storage.get(CONFIG.KEYS.AVATAR, '🎸'),
       content: summary
-        ? `${content}\n\n━━ 📋 오늘의 연습 인증 ━━\n${summary}`
+        ? `${content}\n\n📋 ${summary}`
         : content,
       createdAt: new Date().toISOString(),
       likes: [],
@@ -3207,6 +3205,7 @@ const CrewBoard = (() => {
     };
 
     if (ta) { ta.value = ''; _updateCharCount(''); }
+    document.getElementById('board-practice-preview')?.remove();
     await FireDB.savePost(post);
     showToast('게시글이 등록됐습니다 📝', 'success');
   }
@@ -3362,10 +3361,16 @@ const CrewBoard = (() => {
 
   function cancelEdit() { render(); }
 
-  function previewPractice() {
+function previewPractice() {
     const summary = _buildPracticeSummary();
     if (!summary) { showToast('오늘 저장된 연습 기록이 없어요.', 'warning'); return; }
-    showToast('글 등록 시 연습 인증이 자동 첨부됩니다 ✅', 'success');
+    const prev = document.getElementById('board-practice-preview');
+    if (prev) { prev.remove(); return; }
+    const el = document.createElement('div');
+    el.id = 'board-practice-preview';
+    el.className = 'mt-2 px-3 py-2 bg-orange-50 border border-orange-100 rounded-xl text-xs text-orange-700 whitespace-pre-line';
+    el.textContent = summary;
+    document.getElementById('board-post-input')?.insertAdjacentElement('afterend', el);
   }
 
   // ── 피드 헤더 동기화 ─────────────────────────────────────────────────────
