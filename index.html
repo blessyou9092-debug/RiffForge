@@ -1145,6 +1145,17 @@
                     <option value="triplet">3연음</option>
                   </select>
                 </div>
+                <!-- 스윙 -->
+                <div>
+                  <p class="text-[10px] font-bold text-gray-400 mb-1">스윙</p>
+                  <select id="metro-swing-select" onchange="StudioUI.setSwing(this.value)"
+                    class="w-full text-xs border border-gray-200 rounded-lg px-2 py-1 focus:outline-none focus:border-orange-400">
+                    <option value="0">— 스트레이트</option>
+                    <option value="0.55">♩♪ 라이트 (55%)</option>
+                    <option value="0.6">♩♪ 미디엄 (60%)</option>
+                    <option value="0.67">♩♪ 헤비 (67%)</option>
+                  </select>
+                </div>
 
                 <!-- 메트로놈 볼륨 -->
                 <div>
@@ -1155,6 +1166,23 @@
                   <input type="range" min="0" max="2.5" step="0.05" value="1"
                     oninput="StudioUI.setMetroVolume(this.value)" class="w-full accent-orange-500" />
                 </div>
+                <!-- 카운트인 -->
+                <div class="flex items-center justify-between">
+                  <div class="flex items-center gap-1.5">
+                    <p class="text-[10px] font-bold text-gray-400">카운트인</p>
+                    <input id="count-in-bars" type="number" min="1" max="4" value="1"
+                      class="w-10 text-center text-xs font-bold border border-gray-200 rounded-lg px-1 py-0.5 focus:outline-none focus:border-orange-400" />
+                    <span class="text-[10px] text-gray-400">마디</span>
+                  </div>
+                  <label class="relative inline-flex items-center cursor-pointer">
+                    <input type="checkbox" id="toggle-count-in" class="sr-only peer">
+                    <div class="w-9 h-5 bg-gray-200 peer-checked:bg-orange-400 rounded-full transition-colors
+                      after:content-[''] after:absolute after:top-[2px] after:left-[2px]
+                      after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all
+                      peer-checked:after:translate-x-4"></div>
+                  </label>
+                </div>
+                <div id="count-in-display" class="hidden text-center py-1 text-2xl font-black text-orange-500"></div>
 
                 <!-- ── 스피드 빌더 ──────────────────────── -->
                 <div class="border-t border-gray-100 pt-2">
