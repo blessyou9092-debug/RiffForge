@@ -727,6 +727,24 @@
                 class="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-amber-500 to-orange-500 text-white font-bold text-sm rounded-xl hover:from-amber-600 hover:to-orange-600 transition-all shadow-sm">
                 ✨ 3세트 자동 추천
               </button>
+              <button onclick="PracticeBuilder.openSaveRoutinePresetModal()"
+                class="flex items-center gap-2 px-4 py-2 bg-indigo-500 hover:bg-indigo-600 text-white font-bold text-sm rounded-xl transition-all shadow-sm">
+                💾 루틴 저장
+              </button>
+              <button onclick="PracticeBuilder.openRoutinePresetsModal()"
+                class="flex items-center gap-2 px-4 py-2 bg-white border border-indigo-200 hover:border-indigo-400 text-indigo-600 font-bold text-sm rounded-xl transition-all shadow-sm">
+                📋 프리셋 불러오기
+              </button>
+            </div>
+            <div class="flex flex-wrap gap-2 mb-2">
+              <button onclick="PracticeBuilder.loadRoutineFrom('yesterday')"
+                class="text-xs px-3 py-1.5 bg-gray-100 text-gray-600 font-semibold rounded-lg hover:bg-gray-200 transition-colors">
+                📅 어제 루틴
+              </button>
+              <button onclick="PracticeBuilder.loadRoutineFrom('lastweek')"
+                class="text-xs px-3 py-1.5 bg-gray-100 text-gray-600 font-semibold rounded-lg hover:bg-gray-200 transition-colors">
+                🗓️ 지난주 같은 요일
+              </button>
             </div>
             <div class="flex flex-wrap gap-2">
               <button onclick="PracticeBuilder.addSession('warmup')"
