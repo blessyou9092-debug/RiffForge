@@ -1924,56 +1924,151 @@ const StudioUI = (() => {
     _saveUserPresets();
     renderGenreCards();
   }
+function openEditPresetModal(id) {
+  const p = _userPresets.find(pr => pr.id == id);
+  if (!p) return;
+  const existing = document.getElementById('edit-preset-modal');
+  if (existing) existing.remove();
 
-  function renderGenreCards() {
-    const c = document.getElementById('backing-genres');
-    if (!c) return;
+  const styleOpts = CONFIG.BACKING_TRACKS.map(g =>
+    `<option value="${g.id}" ${g.id === p.genreId ? 'selected' : ''}>${g.emoji} ${g.name}</option>`
+  ).join('');
+  const keyOpts = CONFIG.NOTES.map(n =>
+    `<option value="${n}" ${n === p.defaultKey ? 'selected' : ''}>${n}</option>`
+  ).join('');
 
-    const defaultCards = CONFIG.BACKING_TRACKS.map(g => {
-      const tip = (g.tip || '').replace(/'/g, '&#39;');
-      return `<button data-genre="${g.id}" onclick="StudioUI.selectGenre('${g.id}')"
-        onmouseenter="document.getElementById('backing-tip').textContent='${tip}'"
-        onmouseleave="document.getElementById('backing-tip').textContent=''"
-        class="genre-card flex items-center gap-1.5 px-2 py-1.5 rounded-lg
-          bg-white border border-gray-100 shadow-sm hover:border-orange-300 hover:shadow-md
-          transition-all hover:scale-105 active:scale-95">
-        <span class="text-base shrink-0">${g.emoji}</span>
-        <span class="font-bold text-[11px] text-gray-700 leading-tight text-left">${g.name}</span>
-      </button>`;
-    }).join('');
-
-    const userCards = _userPresets.map(p => {
-      const styleName = CONFIG.BACKING_TRACKS.find(g => g.id === p.genreId)?.name || '';
-      return `<button data-preset-id="${p.id}" onclick="StudioUI.loadUserPreset(${p.id})"
-        class="user-preset-card relative flex items-center gap-1.5 px-2 py-1.5 rounded-lg
-          bg-amber-50 border border-amber-200 shadow-sm hover:border-amber-400 hover:shadow-md
-          transition-all hover:scale-105 active:scale-95 group">
-        <span class="text-base shrink-0">⭐</span>
-        <div class="flex-1 min-w-0 text-left overflow-hidden">
-          <span class="preset-name font-bold text-[11px] text-amber-700 leading-tight block truncate">${p.name}</span>
-          <span class="text-[9px] text-amber-400 leading-none">${styleName}</span>
+  const modal = document.createElement('div');
+  modal.id = 'edit-preset-modal';
+  modal.className = 'fixed inset-0 z-50 flex items-center justify-center p-4';
+  modal.style.background = 'rgba(0,0,0,0.45)';
+  modal.innerHTML = `
+    <div class="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-5">
+      <p class="font-black text-gray-800 text-base mb-4">✏️ 프리셋 수정</p>
+      <div class="space-y-3">
+        <div>
+          <label class="text-xs font-bold text-gray-500 block mb-1">프리셋 이름</label>
+          <input id="edit-preset-name" type="text" value="${p.name.replace(/"/g, '&quot;')}" maxlength="20"
+            class="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-amber-400" />
         </div>
-        <div class="absolute -top-1.5 -right-1 hidden group-hover:flex gap-0.5 z-10">
-          <button onclick="event.stopPropagation();StudioUI.startEditPresetName(${p.id})"
-            class="w-4 h-4 bg-blue-400 hover:bg-blue-500 rounded-full text-white flex items-center justify-center text-[9px] transition-colors">✏</button>
-          <button onclick="event.stopPropagation();StudioUI.deleteUserPreset(${p.id})"
-            class="w-4 h-4 bg-red-400 hover:bg-red-500 rounded-full text-white flex items-center justify-center text-[9px] transition-colors">✕</button>
+        <div>
+          <label class="text-xs font-bold text-gray-500 block mb-1">반주 스타일</label>
+          <select id="edit-preset-style"
+            class="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-amber-400">
+            ${styleOpts}
+          </select>
         </div>
-      </button>`;
-    }).join('');
+        <div class="flex gap-2">
+          <div class="flex-1">
+            <label class="text-xs font-bold text-gray-500 block mb-1">기본 BPM</label>
+            <input id="edit-preset-bpm" type="number" value="${p.defaultBpm}" min="40" max="240"
+              class="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-amber-400" />
+          </div>
+          <div class="flex-1">
+            <label class="text-xs font-bold text-gray-500 block mb-1">기본 키</label>
+            <select id="edit-preset-key"
+              class="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-amber-400">
+              ${keyOpts}
+            </select>
+          </div>
+        </div>
+        <label class="flex items-center gap-2 cursor-pointer select-none">
+          <input id="edit-preset-update-prog" type="checkbox"
+            class="w-4 h-4 accent-amber-500 cursor-pointer" />
+          <span class="text-xs text-gray-600">현재 코드 진행으로 교체
+            <span class="text-gray-400">(현재 ${editableProgression.length}개 코드)</span></span>
+        </label>
+        <p class="text-[10px] text-gray-400">저장된 코드 진행: ${p.progression.length}개</p>
+      </div>
+      <div class="flex gap-2 mt-4">
+        <button onclick="StudioUI.confirmEditPreset(${id})"
+          class="flex-1 py-2.5 bg-amber-500 hover:bg-amber-600 text-white font-bold text-sm rounded-xl transition-colors">저장</button>
+        <button onclick="document.getElementById('edit-preset-modal').remove()"
+          class="px-4 py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-600 font-bold text-sm rounded-xl">취소</button>
+      </div>
+    </div>`;
+  modal.addEventListener('click', e => { if (e.target === modal) modal.remove(); });
+  document.body.appendChild(modal);
+  document.getElementById('edit-preset-name')?.focus();
+  document.getElementById('edit-preset-name')?.select();
+}
 
-    const addBtn = _userPresets.length < 6 ? `
-      <button onclick="StudioUI.openSavePresetModal()"
-        class="flex items-center gap-1.5 px-2 py-1.5 rounded-lg bg-gray-50
-          border border-dashed border-gray-300 hover:border-orange-300
-          hover:bg-orange-50 text-gray-400 hover:text-orange-500
-          transition-all hover:scale-105 active:scale-95">
-        <span class="text-base shrink-0">＋</span>
-        <span class="font-bold text-[11px] leading-tight">프리셋 저장</span>
-      </button>` : '';
-
-    c.innerHTML = defaultCards + userCards + addBtn;
+function confirmEditPreset(id) {
+  const p = _userPresets.find(pr => pr.id == id);
+  if (!p) return;
+  const name = (document.getElementById('edit-preset-name')?.value || '').trim();
+  const genreId = document.getElementById('edit-preset-style')?.value || p.genreId;
+  const bpm = parseInt(document.getElementById('edit-preset-bpm')?.value) || p.defaultBpm;
+  const key = document.getElementById('edit-preset-key')?.value || p.defaultKey;
+  const updateProg = document.getElementById('edit-preset-update-prog')?.checked;
+  if (!name) { showToast('프리셋 이름을 입력해주세요', 'warning'); return; }
+  p.name = name;
+  p.genreId = genreId;
+  p.defaultBpm = Math.max(40, Math.min(240, bpm));
+  p.defaultKey = key;
+  if (updateProg && editableProgression.length > 0) {
+    p.progression = editableProgression.map(c => ({ ...c }));
   }
+  _saveUserPresets();
+  document.getElementById('edit-preset-modal')?.remove();
+  renderGenreCards();
+  showToast(`✅ "${name}" 프리셋이 수정되었습니다!`, 'success');
+}
+
+function renderGenreCards() {
+  const c = document.getElementById('backing-genres');
+  if (!c) return;
+
+  const defaultCards = CONFIG.BACKING_TRACKS.map(g => {
+    const tip = (g.tip || '').replace(/'/g, '&#39;');
+    return `<button data-genre="${g.id}" onclick="StudioUI.selectGenre('${g.id}')"
+      onmouseenter="document.getElementById('backing-tip').textContent='${tip}'"
+      onmouseleave="document.getElementById('backing-tip').textContent=''"
+      class="genre-card flex items-center gap-1.5 px-2 py-1.5 rounded-lg
+        bg-white border border-gray-100 shadow-sm hover:border-orange-300 hover:shadow-md
+        transition-all hover:scale-105 active:scale-95">
+      <span class="text-base shrink-0">${g.emoji}</span>
+      <span class="font-bold text-[11px] text-gray-700 leading-tight text-left">${g.name}</span>
+    </button>`;
+  }).join('');
+
+  const userCards = _userPresets.map(p => {
+    const styleName = CONFIG.BACKING_TRACKS.find(g => g.id === p.genreId)?.name || '';
+    return `<div class="relative group flex items-center gap-1.5 px-2 py-1.5 rounded-lg
+        bg-amber-50 border border-amber-200 shadow-sm hover:border-amber-400 hover:shadow-md
+        transition-all cursor-pointer"
+        onclick="StudioUI.loadUserPreset(${p.id})" data-preset-id="${p.id}">
+      <span class="text-base shrink-0">⭐</span>
+      <div class="flex-1 min-w-0 overflow-hidden">
+        <span class="preset-name font-bold text-[11px] text-amber-700 leading-tight block truncate">${p.name}</span>
+        <span class="text-[9px] text-amber-500 leading-none">${styleName} · BPM ${p.defaultBpm} · ${p.defaultKey}</span>
+      </div>
+      <div class="flex gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
+        <button onclick="event.stopPropagation();StudioUI.openEditPresetModal(${p.id})"
+          class="w-5 h-5 bg-blue-400 hover:bg-blue-500 rounded-full text-white flex items-center justify-center text-[9px] transition-colors">✏</button>
+        <button onclick="event.stopPropagation();StudioUI.deleteUserPreset(${p.id})"
+          class="w-5 h-5 bg-red-400 hover:bg-red-500 rounded-full text-white flex items-center justify-center text-[9px] transition-colors">✕</button>
+      </div>
+    </div>`;
+  }).join('');
+
+  const addBtn = _userPresets.length < 6 ? `
+    <button onclick="StudioUI.openSavePresetModal()"
+      class="flex items-center gap-1.5 px-2 py-1.5 rounded-lg bg-gray-50
+        border border-dashed border-gray-300 hover:border-orange-300
+        hover:bg-orange-50 text-gray-400 hover:text-orange-500
+        transition-all hover:scale-105 active:scale-95">
+      <span class="text-base shrink-0">＋</span>
+      <span class="font-bold text-[11px] leading-tight">프리셋 저장</span>
+    </button>` : '';
+
+  const userSection = `
+    ${_userPresets.length > 0 ? '<p class="text-[10px] font-bold text-amber-500 mt-2 mb-1.5">⭐ 내 프리셋</p>' : ''}
+    <div class="flex flex-col gap-1.5">${userCards}${addBtn}</div>
+  `;
+
+  c.innerHTML = `<div class="grid grid-cols-2 gap-1.5">${defaultCards}</div>${userSection}`;
+}
+
 
   // ── 지판 키/스케일 셀렉트 초기화 ────────────────────────────────
   function initSelects() {
@@ -2056,6 +2151,7 @@ const StudioUI = (() => {
     //백킹 유저 프리셋
     loadUserPresets, loadUserPreset, openSavePresetModal, confirmSavePreset,
     deleteUserPreset, startEditPresetName, finishEditPresetName,
+        openEditPresetModal, confirmEditPreset,
     getUserPresets: () => _userPresets,
     // 공통
     onEnter,
