@@ -1240,6 +1240,9 @@ const StudioUI = (() => {
   let _sbActive = false;
   let _sbBarCount = 0;
   let _sbCurrentBpm = 60;
+  let _countInActive = false;
+  let _countInBarsLeft = 0;
+
 
   // ── 백킹 상태 ──────────────────────────────────────────────────────
   let selectedGenre = null;
@@ -1332,6 +1335,28 @@ const StudioUI = (() => {
 
   // ── 세분화 선택 ──────────────────────────────────────────────────
   function setSubdiv(id) { Metronome.setSubdiv(id); }
+  function setSwing(val) {
+    const amount = parseFloat(val) || 0;
+    Metronome.setSwing(amount);
+    BackingEngine.setSwing(amount);
+  }
+
+  function setPendingBpm(val) {
+    Metronome.setPendingBpm(val);
+    BackingEngine.setPendingBpm(val);
+    syncBpmDisplay(val);
+  }
+
+  function updateCountInDisplay(barsLeft) {
+    const el = document.getElementById('count-in-display');
+    if (!el) return;
+    if (barsLeft > 0) {
+      el.textContent = `준비 ${barsLeft}마디`;
+      el.classList.remove('hidden');
+    } else {
+      el.classList.add('hidden');
+    }
+  }
 
   // ── 사운드 타입 ──────────────────────────────────────────────────
   function setSoundType(id) {
@@ -1609,35 +1634,45 @@ const StudioUI = (() => {
 
   // ── 메트로놈 & 백킹 동시 재생 ────────────────────────────────────
   async function syncPlay() {
-  await AudioEngine.ensureRunning(); // iOS: 탭 제스처 안에서 AudioContext 활성화
-  const metroOn = document.getElementById('toggle-metro')?.checked ?? true;
-  const backingOn = document.getElementById('toggle-backing')?.checked ?? true;
+    await AudioEngine.ensureRunning();
+    const metroOn = document.getElementById('toggle-metro')?.checked ?? true;
+    const backingOn = document.getElementById('toggle-backing')?.checked ?? true;
+    const countInEnabled = document.getElementById('toggle-count-in')?.checked ?? false;
+    const countInBars = parseInt(document.getElementById('count-in-bars')?.value) || 1;
 
     const isAnyPlaying = Metronome.getIsPlaying() || BackingEngine.getIsPlaying();
-    if (isAnyPlaying) {
-      stopAll(); return;
-    }
+    if (isAnyPlaying) { stopAll(); return; }
 
     if (metroOn) { Metronome.start(); updateMetroBtn(true); }
     if (backingOn) {
-      const prog = editableProgression.length > 0 ? editableProgression : [{ root: selectedKey, type: 'major' }];
-      BackingEngine.start(prog, selectedGenre?.id || 'blues', _bpm);
-      updateBackingBtn(true);
-      BackingEngine.onChordChange(idx => highlightChord(idx));
+      if (countInEnabled && metroOn && countInBars > 0) {
+        _countInActive = true;
+        _countInBarsLeft = countInBars;
+        showToast(`🥁 카운트인 ${countInBars}마디...`, 'info');
+      } else {
+        const prog = editableProgression.length > 0 ? editableProgression : [{ root: selectedKey, type: 'major' }];
+        BackingEngine.start(prog, selectedGenre?.id || 'blues', _bpm);
+        updateBackingBtn(true);
+        BackingEngine.onChordChange(idx => highlightChord(idx));
+        showToast('🎵 재생 시작!', 'success');
+      }
+    } else {
+      showToast('🎵 재생 시작!', 'success');
     }
 
     const btn = document.getElementById('studio-play-btn');
     if (btn) { btn.textContent = '⏹ 정지'; btn.style.background = 'linear-gradient(135deg,#ef4444,#dc2626)'; }
-    showToast('🎵 재생 시작!', 'success');
   }
 
 
   function stopAll() {
+    _countInActive = false;
+    _countInBarsLeft = 0;
+    updateCountInDisplay(0);
     Metronome.stop(); updateMetroBtn(false);
     BackingEngine.stop();
     const btn = document.getElementById('studio-play-btn');
     if (btn) { btn.textContent = '▶ 재생'; btn.style.background = 'linear-gradient(135deg,#FF6B00,#FF8C42)'; }
-    // 지판 코드 강조 해제
     document.querySelectorAll('.chord-card').forEach(el => { el.style.borderColor = ''; el.style.boxShadow = ''; });
   }
 
@@ -1711,7 +1746,7 @@ const StudioUI = (() => {
     if (_sbBarCount >= barsPerStep) {
       _sbBarCount = 0;
       _sbCurrentBpm = Math.min(_sbCurrentBpm + step, targetBpm);
-      setBpm(_sbCurrentBpm);
+  setPendingBpm(_sbCurrentBpm);
       if (_sbCurrentBpm >= targetBpm) {
         _sbActive = false;
         showToast('🎉 스피드 빌더 완료! 목표 BPM 달성!', 'success');
@@ -1987,14 +2022,33 @@ const StudioUI = (() => {
           setTimeout(() => { btn.style.transform = ''; }, 120);
         }
       });
-      if (beat === 0) _sbOnBar();
+      if (beat === 0) {
+        if (_countInActive) {
+          updateCountInDisplay(_countInBarsLeft);   // 먼저 표시
+          _countInBarsLeft--;
+          if (_countInBarsLeft <= 0) {
+            _countInActive = false;
+            updateCountInDisplay(0);
+            const backingOn = document.getElementById('toggle-backing')?.checked ?? true;
+            if (backingOn) {
+              const startTime = Metronome.getNextNoteTime();
+              const prog = editableProgression.length > 0 ? editableProgression : [{ root: selectedKey, type: 'major' }];
+              BackingEngine.start(prog, selectedGenre?.id || 'blues', _bpm, startTime);
+              BackingEngine.onChordChange(idx => highlightChord(idx));
+            }
+            showToast('🎵 재생 시작!', 'success');
+          }
+        } else {
+          _sbOnBar();
+        }
+      }
     });
   }
 
   return {
     // 메트로놈
     setBpm, adjustBpm, toggleMetronome, tapTempo, setMetroVolume,
-    setTimeSig, setSubdiv, setSoundType, cycleBeat,
+    setTimeSig, setSubdiv, setSoundType, setSwing, cycleBeat,
     onMetroToggle, onBackingToggle, setHarmonyBtn,
     // 백킹
     selectGenre, setKey, setScale, toggleBacking, syncPlay, stopAll,
