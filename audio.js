@@ -174,6 +174,52 @@ const Metronome = (() => {
     }
     timerID = setTimeout(scheduler, 25);
   }
+  function start() {
+    if (isPlaying) return;
+    const c = AudioEngine.getCtx();
+    isPlaying = true;
+    currentBeat = 0;
+    currentSub = 0;
+    nextNoteTime = c.currentTime + 0.05;
+    scheduler();
+  }
+  function stop() {
+    isPlaying = false;
+    clearTimeout(timerID);
+    timerID = null;
+  }
+  function toggle() { isPlaying ? stop() : start(); return isPlaying; }
+
+  function setBpm(val) {
+    bpm = Math.max(CONFIG.METRONOME.MIN_BPM, Math.min(CONFIG.METRONOME.MAX_BPM, parseInt(val) || 80));
+    pendingBpm = null;
+    return bpm;
+  }
+  function adjustBpm(delta) { return setBpm(bpm + delta); }
+  function setPendingBpm(val) {
+    pendingBpm = Math.max(CONFIG.METRONOME.MIN_BPM, Math.min(CONFIG.METRONOME.MAX_BPM, parseInt(val) || 80));
+  }
+  function setSwing(val) { swingAmount = Math.max(0, Math.min(0.67, parseFloat(val) || 0)); }
+  function setTimeSig(sig) { timeSig = sig; initPattern(); }
+  function setSubdiv(id) { subdivId = id; }
+  function setVolume(v) { volume = Math.max(0, Math.min(2.5, parseFloat(v))); }
+  function setSoundType(id) { soundTypeId = id; }
+  function onBeat(cb) { onBeatCb = cb; }
+
+  initPattern();
+
+  return {
+    start, stop, toggle, setBpm, adjustBpm, setPendingBpm, setSwing,
+    setTimeSig, setSubdiv, setVolume, setSoundType,
+    cycleBeat, initPattern, onBeat,
+    getBpm: () => bpm,
+    getVolume: () => volume,
+    getIsPlaying: () => isPlaying,
+    getBeatPattern: () => [...beatPattern],
+    getTimeSig: () => timeSig,
+    getNextNoteTime: () => nextNoteTime,
+  };
+})();
 
 
 
@@ -553,22 +599,6 @@ function playGuitar(freqs, t, dur) {
     schedID = setTimeout(scheduler, 25);
   }
 
-
-      // 장르별 베이스 리듬 패턴 적용
-      if (currentBarChord) {
-        const bn = currentBarBassPattern.find(([s]) => s === step);
-        if (bn) {
-          const [, semi, dur] = bn;
-          const rootMidi = CONFIG.noteToMidi(currentBarChord.root, 2);
-          playBass(CONFIG.midiToHz(rootMidi + semi), nextNoteTime, secPerStep * dur);
-        }
-      }
-
-      nextNoteTime += secPerStep;
-      beatIdx++;
-    }
-    schedID = setTimeout(scheduler, 25);
-  }
 
    function start(prog, genre, bpmVal, startTime) {
     if (isPlaying) stop();
