@@ -270,13 +270,36 @@ function loadRoutineFrom(type) {
 }
 
 // ── 루틴 프리셋 내부 유틸 ───────────────────────────────────────────
-function _loadRoutinePresets() {
-  try { _routinePresets = JSON.parse(localStorage.getItem('rf_routine_presets') || '[]'); }
-  catch { _routinePresets = []; }
-}
-function _saveRoutinePresets() {
-  localStorage.setItem('rf_routine_presets', JSON.stringify(_routinePresets));
-}
+  function _loadRoutinePresets() {
+    try {
+      _routinePresets = JSON.parse(localStorage.getItem('rf_routine_presets') || '[]');
+    } catch { _routinePresets = []; }
+
+    // 클라우드 동기화 (로그인 상태일 때)
+    if (typeof FireDB !== 'undefined' && FireDB.isReady() && FireDB.getUsername()) {
+      FireDB.loadRoutinePresets().then(cloudPresets => {
+        if (cloudPresets && cloudPresets.length > 0) {
+          // 클라우드 우선 병합 (id 기준)
+          const localMap = new Map(_routinePresets.map(p => [p.id, p]));
+          cloudPresets.forEach(cp => { if (!localMap.has(cp.id)) localMap.set(cp.id, cp); });
+          _routinePresets = [...localMap.values()];
+          localStorage.setItem('rf_routine_presets', JSON.stringify(_routinePresets));
+        } else if (_routinePresets.length > 0) {
+          // 로컬에만 있으면 클라우드에 업로드
+          FireDB.saveRoutinePresets(_routinePresets).catch(() => {});
+        }
+      }).catch(() => {});
+    }
+  }
+
+  function _saveRoutinePresets() {
+    localStorage.setItem('rf_routine_presets', JSON.stringify(_routinePresets));
+    if (typeof FireDB !== 'undefined' && FireDB.isReady() && FireDB.getUsername()) {
+      FireDB.saveRoutinePresets(_routinePresets)
+        .catch(e => console.warn('[RoutinePresets] 클라우드 저장 실패:', e));
+    }
+  }
+
 function _renderRoutinePresetsList() {
   if (_routinePresets.length === 0) {
     return `<p class="text-center text-sm text-gray-400 py-4">저장된 프리셋이 없어요.<br>현재 루틴을 프리셋으로 저장해보세요!</p>`;
@@ -1669,7 +1692,7 @@ async function syncFromCloud() {
           <h3 class="text-sm font-black text-gray-700">🎯 진행 중인 곡</h3>
           <span class="text-xs bg-blue-100 text-blue-700 font-bold px-2 py-0.5 rounded-full">${inProgress.length}곡</span>
           <button onclick="RepertoireTracker.toggleCompact()"
-            class="ml-auto text-[10px] px-2.5 py-1 rounded-lg border transition-all ${_compact
+            class="text-[10px] px-2.5 py-1 rounded-lg border transition-all ${_compact
               ? 'bg-amber-50 border-amber-200 text-amber-600 font-bold'
               : 'bg-gray-50 border-gray-200 text-gray-400 hover:text-gray-600'}">
             ${_compact ? '📋 간소화 ON' : '📋 간소화 보기'}
