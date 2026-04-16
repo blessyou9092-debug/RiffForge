@@ -1168,6 +1168,7 @@ function deleteLog(dateStr) {
 // ═══════════════════════════════════════════════════════════════════════════
 const RepertoireTracker = (() => {
   const KEY = 'rf_repertoire';
+  let _compact = false;
   const STATE_STYLES = {
     learning: { badge: 'bg-blue-100 text-blue-700', bar: 'bg-blue-400' },
     polishing: { badge: 'bg-amber-100 text-amber-700', bar: 'bg-amber-400' },
@@ -1587,7 +1588,7 @@ async function syncFromCloud() {
   }
 
   // ── 카드 렌더링 ───────────────────────────────────────────────────────────
-  function songCard(song) {
+  function songCard(song, compact = false) {
     const sty = STATE_STYLES[song.state] || STATE_STYLES.learning;
     const pct = song.progress || 0;
     const dd = dday(song.deadline);
@@ -1595,7 +1596,7 @@ async function syncFromCloud() {
     const donePartsCount = hasParts ? (song.parts || []).filter(p => p.level === 3).length : 0;
 
     return `
-      <div class="bg-white rounded-xl border border-gray-200 shadow-sm p-3 space-y-2">
+      <div class="bg-white rounded-xl border border-gray-200 shadow-sm ${compact ? 'p-2 space-y-1.5' : 'p-3 space-y-2'}">
         <div class="flex items-start justify-between gap-2">
           <div class="flex-1 min-w-0">
             <p class="text-sm font-bold text-gray-800 truncate">${song.title}</p>
@@ -1608,6 +1609,7 @@ async function syncFromCloud() {
           </div>
         </div>
 
+        ${!compact ? `
         <!-- 날짜 정보 -->
         <div class="flex gap-3 text-[10px] text-gray-400">
           <span>📅 ${song.addedAt ? new Date(song.addedAt).toLocaleDateString('ko-KR', { month: 'short', day: 'numeric' }) : '-'} 등록</span>
@@ -1628,6 +1630,8 @@ async function syncFromCloud() {
             <div class="${sty.bar} h-1.5 rounded-full transition-all" style="width:${pct}%"></div>
           </div>
         </div>
+        ` : ''}
+
 
         ${!hasParts ? `
         <div class="flex gap-2 flex-wrap text-xs">
@@ -1664,9 +1668,15 @@ async function syncFromCloud() {
         <div class="flex items-center gap-2 mb-3">
           <h3 class="text-sm font-black text-gray-700">🎯 진행 중인 곡</h3>
           <span class="text-xs bg-blue-100 text-blue-700 font-bold px-2 py-0.5 rounded-full">${inProgress.length}곡</span>
+          <button onclick="RepertoireTracker.toggleCompact()"
+            class="ml-auto text-[10px] px-2.5 py-1 rounded-lg border transition-all ${_compact
+              ? 'bg-amber-50 border-amber-200 text-amber-600 font-bold'
+              : 'bg-gray-50 border-gray-200 text-gray-400 hover:text-gray-600'}">
+            ${_compact ? '📋 간소화 ON' : '📋 간소화 보기'}
+          </button>
         </div>
         ${inProgress.length
-          ? `<div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3">${inProgress.map(songCard).join('')}</div>`
+          ? `<div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3">${inProgress.map(s => songCard(s, _compact)).join('')}</div>`
           : `<p class="text-sm text-gray-300 py-6 text-center">등록된 곡이 없습니다</p>`}
       </div>
       <div>
@@ -1675,17 +1685,22 @@ async function syncFromCloud() {
           <span class="text-xs bg-purple-100 text-purple-700 font-bold px-2 py-0.5 rounded-full">${mastered.length}곡</span>
         </div>
         ${mastered.length
-          ? `<div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3">${mastered.map(songCard).join('')}</div>`
+          ? `<div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3">${mastered.map(s => songCard(s, _compact)).join('')}</div>`
           : `<p class="text-sm text-gray-300 py-4 text-center">완성된 곡을 여기서 확인하세요</p>`}
       </div>`;
+  }
+
+  function toggleCompact() {
+    _compact = !_compact;
+    render();
   }
 
   return {
     addSong, setProgress, setField, removeSong, practiceSong, render, syncFromCloud,
     openDetailModal, addPart, addPartCustom, removePart, updatePart, togglePartsManual,
-    linkPreset, unlinkPreset, openLinkedPreset,
-
+    linkPreset, unlinkPreset, openLinkedPreset, toggleCompact,
   };
+
 })();
 
 // ═══════════════════════════════════════════════════════════════════════════
