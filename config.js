@@ -466,7 +466,7 @@ const CONFIG = {
         { id: 'headless_gtr', name: '목없는 기타', emoji: '🎸', img: 'assets/guitars/목없는기타.svg', unlockDesc: '기존 사용자 지급', unlockCond: { type: 'default' }, buff: null },
     { id: 'pretty_gtr',   name: '예쁜 기타',   emoji: '🎸', img: 'assets/guitars/예쁜기타.svg',   unlockDesc: '기존 사용자 지급', unlockCond: { type: 'default' }, buff: null },
     { id: 'pretty_bass',  name: '예쁜 베이스', emoji: '🎵', img: 'assets/guitars/예쁜베이스.svg', unlockDesc: '기존 사용자 지급', unlockCond: { type: 'default' }, buff: null },
-    { id: 'bass_icons8', name: '베이스 기타', emoji: '🎸',  img: 'https://img.icons8.com/color/48/bass-guitar.png',  unlockDesc: '기존 사용자 지급', unlockCond: { type: 'default' }, buff: null },
+    { id: 'bass_icons8', name: '베짱이', emoji: '🎸',  img: 'https://img.icons8.com/color/48/bass-guitar.png',  unlockDesc: '기존 사용자 지급', unlockCond: { type: 'default' }, buff: null },
 
   ],
 
