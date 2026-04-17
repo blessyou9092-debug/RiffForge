@@ -27,6 +27,12 @@ function getTodayStr() {
   const day = String(d.getDate()).padStart(2, '0');
   return `${y}-${m}-${day}`;
 }
+function _renderAvatarHtml(val, cls) {
+  return (val && val.startsWith('assets/'))
+    ? `<img src="${val}" class="${cls || 'w-6 h-6'} object-contain rounded" alt="avatar">`
+    : `<span>${val || '🎸'}</span>`;
+}
+
 function getSeasonInfo() {
   const [ay, am, ad] = CONFIG.SEASON_ANCHOR.split('-').map(Number);
   const anchor = new Date(ay, am - 1, ad);
@@ -739,11 +745,18 @@ function addWater() {
       if (unlockedGuitars.length === 0) {
         guitarEl.innerHTML = '<p class="text-xs text-gray-400">아직 해금된 기타가 없어요.</p>';
       } else {
-        guitarEl.innerHTML = unlockedGuitars.map(g => `
-          <button onclick="AppState._selectAvatar('${g.emoji}')"
-            class="avatar-opt text-2xl w-10 h-10 rounded-xl flex items-center justify-center border-2 transition-all
-              ${curAvatar === g.emoji ? 'border-amber-400 bg-amber-50' : 'border-gray-200 hover:border-amber-200'}"
-            data-avatar="${g.emoji}" title="${g.name}">${g.emoji}</button>`).join('');
+        guitarEl.innerHTML = unlockedGuitars.map(g => {
+          const avatarVal = g.img || g.emoji;
+          const isSelected = curAvatar === avatarVal;
+          return `<button onclick="AppState._selectAvatar('${avatarVal}')"
+            class="avatar-opt w-10 h-10 rounded-xl flex items-center justify-center border-2 transition-all
+              ${isSelected ? 'border-amber-400 bg-amber-50' : 'border-gray-200 hover:border-amber-200'}"
+            data-avatar="${avatarVal}" title="${g.name}">
+            ${g.img
+              ? `<img src="${g.img}" class="w-6 h-6 object-contain rounded" alt="${g.name}">`
+              : `<span class="text-2xl">${g.emoji}</span>`}
+          </button>`;
+        }).join('');
       }
     }
   }
@@ -3506,7 +3519,7 @@ function previewPractice() {
     const name = Storage.get(CONFIG.KEYS.USERNAME, '') || '나';
     const el1 = document.getElementById('board-my-avatar');
     const el2 = document.getElementById('board-my-name');
-    if (el1) el1.textContent = avatar;
+    if (el1) el1.innerHTML = _renderAvatarHtml(avatar, 'w-7 h-7');
     if (el2) el2.textContent = name;
   }
 
@@ -3561,7 +3574,7 @@ function previewPractice() {
         const isMyComment = c.authorId === myId || (myName && c.authorName === myName);
         return `
             <div id="comment-${c.id}" class="flex items-start gap-2 bg-gray-50 rounded-xl px-3 py-2">
-              <span class="text-base leading-none mt-0.5 shrink-0">${c.authorAvatar}</span>
+              <span class="text-base leading-none mt-0.5 shrink-0">${_renderAvatarHtml(c.authorAvatar, 'w-5 h-5')}</span>
               <div class="min-w-0 flex-1">
                 <div class="flex items-center gap-1">
                   <span class="text-xs font-bold text-gray-700">${c.authorName}</span>
@@ -3585,7 +3598,7 @@ function previewPractice() {
       return `
         <div id="post-card-${p.id}" class="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
           <div class="flex items-center gap-3 mb-3">
-            <span class="text-2xl leading-none">${p.authorAvatar}</span>
+            <span class="text-2xl leading-none">${_renderAvatarHtml(p.authorAvatar, 'w-7 h-7')}</span>
             <div class="flex-1 min-w-0">
               <p class="font-bold text-gray-800 text-sm">${p.authorName}</p>
               <p class="text-xs text-gray-400">${_relTime(p.createdAt)}${p.editedAt ? ' · 수정됨' : ''}</p>
