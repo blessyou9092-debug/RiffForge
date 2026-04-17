@@ -28,7 +28,7 @@ function getTodayStr() {
   return `${y}-${m}-${day}`;
 }
 function _renderAvatarHtml(val, cls) {
-  return (val && val.startsWith('assets/'))
+  return (val && (val.startsWith('assets/') || val.startsWith('http')))
     ? `<img src="${val}" class="${cls || 'w-6 h-6'} object-contain rounded" alt="avatar">`
     : `<span>${val || '🎸'}</span>`;
 }
@@ -678,7 +678,9 @@ function addWater() {
         if (c.type === 'pomo') unlocked = false; // 포모 누적 미구현
 
         return `<div class="flex flex-col items-center gap-1 p-3 rounded-xl border ${unlocked ? 'border-amber-200 bg-amber-50' : 'border-gray-100 bg-gray-50 opacity-40 grayscale'}" title="${unlocked ? (g.buff?.label || '기본') : '잠금: ' + g.unlockDesc}">
-          <span class="text-2xl">${g.emoji}</span>
+          ${g.img
+            ? `<img src="${g.img}" class="w-8 h-8 object-contain" alt="${g.name}">`
+            : `<span class="text-2xl">${g.emoji}</span>`}
           <span class="text-[11px] font-bold text-center text-gray-700 leading-tight">${g.name}</span>
           ${unlocked && g.buff ? `<span class="text-[10px] text-amber-600 font-bold">${g.buff.label}</span>` : ''}
           ${!unlocked ? `<span class="text-[10px] text-gray-400 text-center">${g.unlockDesc}</span>` : ''}
