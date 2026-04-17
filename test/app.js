@@ -2771,16 +2771,18 @@ const ReferenceUI = (() => {
     minor: { 0: 'R', 3: 'b3', 5: '4', 7: '5', 10: 'b7' },
   };
 
-  // v9 PENTA_POS_OFFSETS (5A줄 루트 기준 창 시작 오프셋)
-// 변경 후 (major와 동일한 창 오프셋 — 박스 경계는 스케일 타입 무관)
-const PENTA_POS_OFFSETS = {
-  major: [0, 2, 4, 7, 9],
-  minor: [0, 2, 4, 7, 9],
-};
+  // C Major 기준 CAGED 포지션 박스 (6번줄→1번줄 순, [lo, hi] fret)
+  const PENTA_CAGED_BOXES = [
+    { ranges: [[8,10],[7,10],[7,10],[7,9],[8,10],[8,10]] },       // Pos 1 - E form
+    { ranges: [[10,12],[10,12],[10,12],[9,12],[10,13],[10,12]] }, // Pos 2 - D form
+    { ranges: [[0,3],[0,3],[0,2],[0,2],[1,2],[0,3]] },            // Pos 3 - C form
+    { ranges: [[3,5],[3,5],[3,5],[3,5],[3,5],[3,5]] },            // Pos 4 - A form
+    { ranges: [[5,8],[5,7],[5,7],[5,7],[5,8],[5,8]] },            // Pos 5 - G form
+  ];
 
   const CAGED_NAMES = {
-    major: ['A Form — Pos 1', 'E Form — Pos 2', 'C Form — Pos 3', 'D Form — Pos 4', 'G Form — Pos 5'],
-    minor: ['Am Form — Pos 1', 'Gm Form — Pos 2', 'Em Form — Pos 3', 'Dm Form — Pos 4', 'Cm Form — Pos 5'],
+    major: ['E Form — Pos 1', 'D Form — Pos 2', 'C Form — Pos 3', 'A Form — Pos 4', 'G Form — Pos 5'],
+    minor: ['Em Form — Pos 1', 'Dm Form — Pos 2', 'Cm Form — Pos 3', 'Am Form — Pos 4', 'Gm Form — Pos 5'],
   };
 
   const _PENTA_POS_COLORS = [
@@ -2842,6 +2844,23 @@ function _getPentaPositions(rootNote, mode) {
     };
   });
 }
+  // Root별 CAGED 박스 계산 (C Major 기준 데이터를 반음 shift)
+  // minor는 relative major (+3반음)로 환산하여 동일 박스 데이터 사용
+  function _computeBoxesForRoot(rootNote, mode) {
+    const rootSemi = KEY_SEMITONES[rootNote] || 0;
+    const refSemi  = mode === 'minor' ? (rootSemi + 3) % 12 : rootSemi;
+    let shift = refSemi > 6 ? refSemi - 12 : refSemi;
+
+    return PENTA_CAGED_BOXES.map(box => {
+      const perString = box.ranges.map(([lo, hi], j) => {
+        let nLo = lo + shift, nHi = hi + shift;
+        if (nLo < 0)  { nLo += 12; nHi += 12; }
+        if (nHi > 17) { nLo -= 12; nHi -= 12; }
+        return { s: j, lo: nLo, hi: nHi }; // j=0→s=0(6번줄), j=5→s=5(1번줄)
+      });
+      return { perString };
+    });
+  }
 
 
 
@@ -2852,65 +2871,78 @@ function _getPentaPositions(rootNote, mode) {
    * - 특정 포지션 선택 시: 그 포지션의 Set에 포함된 음만 선명
    * - All(0): 첫 번째 소유 포지션 색상으로 표시
    */
-  function renderPentaPositions() {
-    const mode = _pentaKey;
+   function renderPentaPositions() {
+    const mode     = _pentaKey;
     const rootNote = document.getElementById('penta-key-root')?.value || 'A';
-    const positions = _getPentaPositions(rootNote, mode);
+    const boxes    = _computeBoxesForRoot(rootNote, mode);
 
-    // "rfSIdx-fret" → Set<posNum>  (겹침 허용)
-    const dotPosSet = new Map();
-    positions.forEach(posData => {
-      posData.notes.forEach(({ si, fret }) => {
-        const k = `${5 - si}-${fret}`;
-        if (!dotPosSet.has(k)) dotPosSet.set(k, new Set());
-        dotPosSet.get(k).add(posData.pos);
+    // (s, fret) → 포지션 번호 (0~17 + 옥타브 반복 포함)
+    const fretPosMap = new Map();
+    boxes.forEach((box, i) => {
+      const posNum = i + 1;
+      box.perString.forEach(({ s, lo, hi }) => {
+        for (let f = lo; f <= hi && f <= 17; f++) {
+          const k = `${s}-${f}`;
+          if (!fretPosMap.has(k)) fretPosMap.set(k, posNum);
+        }
+        for (let f = lo + 12; f <= hi + 12 && f <= 17; f++) {
+          const k = `${s}-${f}`;
+          if (!fretPosMap.has(k)) fretPosMap.set(k, posNum);
+        }
       });
     });
 
-    const scaleName = mode === 'major' ? 'Major Pentatonic' : 'Minor Pentatonic';
+    // 배경 박스 목록 (선택된 포지션만 진하게, 나머지 흐리게)
+    const positionBoxes = [];
+    boxes.forEach((box, i) => {
+      const posNum   = i + 1;
+      const isActive = _pentaPos === 0 || _pentaPos === posNum;
+      const color    = _PENTA_POS_COLORS[posNum].fill;
+      const opacity  = isActive ? 0.25 : 0.07;
+      positionBoxes.push({ color, opacity, perString: box.perString });
+      // +12 옥타브 반복 박스
+      const repeat = box.perString
+        .map(({ s, lo, hi }) => ({ s, lo: lo + 12, hi: Math.min(hi + 12, 17) }))
+        .filter(({ lo }) => lo <= 17);
+      if (repeat.length) positionBoxes.push({ color, opacity, perString: repeat });
+    });
 
+    // 노트 컬러 — 포지션 선택과 무관하게 항상 동일
     const noteColorFn = (fret, sIdx, note, _role) => {
-      const k = `${sIdx}-${fret}`;
-      const set = dotPosSet.get(k);
-      if (!set || set.size === 0) {
-        return { fill: '#d1d5db', stroke: '#9ca3af', textFill: '#9ca3af', dotR: 8, label: note, opacity: 0.15 };
-      }
-
-      // 선택 포지션 모드: 해당 포지션 소유 여부로 활성/비활성 판별
-      const isActive = _pentaPos === 0 || set.has(_pentaPos);
-
-      // 색상: 선택 포지션이면 그 포지션 색, All이면 가장 낮은 포지션 번호 색
-      const displayPos = (_pentaPos !== 0 && set.has(_pentaPos))
-        ? _pentaPos
-        : Math.min(...set);
-      const c = _PENTA_POS_COLORS[displayPos];
-      const isRoot = note === rootNote;
+      const posNum = fretPosMap.get(`${sIdx}-${fret}`);
+      const c = posNum
+        ? _PENTA_POS_COLORS[posNum]
+        : { fill: '#9ca3af', stroke: '#6b7280', textFill: '#fff' };
       return {
         fill: c.fill, stroke: c.stroke, textFill: c.textFill,
-        dotR: isRoot ? 11 : 9,
-        label: note,
-        opacity: isActive ? 1 : 0.15,
+        dotR: note === rootNote ? 11 : 9,
+        label: note, opacity: 1,
       };
     };
 
     Fretboard.render('penta-full', {
-      rootNote, scaleName,
+      rootNote,
+      scaleName: mode === 'major' ? 'Major Pentatonic' : 'Minor Pentatonic',
       startFret: 0, endFret: 17,
-      noteColorFn,
+      noteColorFn, positionBoxes,
     });
 
-    _updatePentaLegend(positions);
+    _updatePentaLegend(boxes);
   }
 
-  function _updatePentaLegend(positions) {
+
+  function _updatePentaLegend(boxes) {
     const el = document.getElementById('penta-legend-dynamic');
     if (!el) return;
-    const colors = ['amber-400', 'indigo-500', 'emerald-500', 'orange-500', 'pink-500'];
-    const names = CAGED_NAMES[_pentaKey] || [];
-    el.innerHTML = positions.map((b, i) => {
+    const colorNames = ['amber-400', 'indigo-500', 'emerald-500', 'orange-500', 'pink-500'];
+    const names      = CAGED_NAMES[_pentaKey] || [];
+    el.innerHTML = boxes.map((box, i) => {
+      const frets = box.perString.flatMap(({ lo, hi }) => [lo, hi]);
+      const minF  = Math.min(...frets);
+      const maxF  = Math.max(...frets);
       return `<span class="flex items-center gap-1">
-        <span class="w-3 h-3 rounded-full bg-${colors[i]} inline-block"></span>
-        <span class="text-xs">${names[i] || 'Pos ' + (i + 1)} (${b.start}~${b.end}fr)</span>
+        <span class="w-3 h-3 rounded-full bg-${colorNames[i]} inline-block"></span>
+        <span class="text-xs">${names[i] || 'Pos ' + (i + 1)} (${minF}~${maxF}fr)</span>
       </span>`;
     }).join('');
   }
