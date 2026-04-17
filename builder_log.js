@@ -2027,7 +2027,7 @@ const CrewRanking = (() => {
         }
         rows += `<div class="flex items-center gap-3 p-2.5 rounded-xl ${isMe ? 'bg-amber-50 border border-amber-200' : 'bg-gray-50'}">
           <span class="text-lg w-7 text-center shrink-0">${i < 3 ? MEDALS[i] : (i + 1) + '위'}</span>
-          <span class="text-xl shrink-0">${r.avatar || '🎸'}</span>
+          <span class="text-xl shrink-0">${_renderAvatarHtml(r.avatar || '🎸', 'w-6 h-6')}</span>
           <div class="flex-1 min-w-0">
             <p class="text-sm font-bold text-gray-800 truncate">${r.username}${isMe ? ' <span class="text-amber-500 text-xs">(나)</span>' : ''}</p>
           </div>
@@ -2085,7 +2085,7 @@ const CrewRanking = (() => {
 
         ${top ? `
         <div class="flex-1 flex flex-col items-center justify-center px-3 py-1 gap-0.5">
-          <div class="text-2xl drop-shadow">${top.avatar || '🎸'}</div>
+          <div class="text-2xl drop-shadow">${_renderAvatarHtml(top.avatar || '🎸', 'w-8 h-8')}</div>
           <div class="flex items-center gap-0.5">
             <span class="text-sm">🥇</span>
             <p class="text-xs font-black text-white drop-shadow truncate max-w-[80px]">${top.username}</p>
