@@ -463,6 +463,9 @@ const CONFIG = {
     { id: 'v', name: 'Flying V', emoji: '✌️', unlockDesc: '주간 챌린지 10회 완료', unlockCond: { type: 'challenge', count: 10 }, buff: { label: 'XP +20%', xpMult: 1.20 } },
     { id: 'bass', name: '프레시전 베이스', emoji: '🎵', unlockDesc: '마스터 곡 15곡', unlockCond: { type: 'mastered', count: 15 }, buff: { label: '전체 XP +35%', xpMult: 1.35 } },
     { id: 'acoustic12', name: '12현 어쿠스틱', emoji: '🌌', unlockDesc: '물주기 200회', unlockCond: { type: 'water', count: 200 }, buff: { label: 'XP +40%', xpMult: 1.40 } },
+        { id: 'headless_gtr', name: '목없는 기타', emoji: '🎸', img: 'assets/guitars/목없는기타.svg', unlockDesc: '기존 사용자 지급', unlockCond: { type: 'default' }, buff: null },
+    { id: 'pretty_gtr',   name: '예쁜 기타',   emoji: '🎸', img: 'assets/guitars/예쁜기타.svg',   unlockDesc: '기존 사용자 지급', unlockCond: { type: 'default' }, buff: null },
+    { id: 'pretty_bass',  name: '예쁜 베이스', emoji: '🎵', img: 'assets/guitars/예쁜베이스.svg', unlockDesc: '기존 사용자 지급', unlockCond: { type: 'default' }, buff: null },
   ],
 
   // ── 주간 챌린지 템플릿 ──────────────────────────────────────────
