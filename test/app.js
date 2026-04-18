@@ -2776,7 +2776,7 @@ const ReferenceUI = (() => {
     { ranges: [[8,10],[7,10],[7,10],[7,9],[8,10],[8,10]] },       // Pos 1 - E form
     { ranges: [[10,12],[10,12],[10,12],[9,12],[10,13],[10,12]] }, // Pos 2 - D form
     { ranges: [[0,3],[0,3],[0,2],[0,2],[1,2],[0,3]] },            // Pos 3 - C form
-    { ranges: [[3,5],[3,5],[3,5],[3,5],[3,5],[3,5]] },            // Pos 4 - A form
+{ ranges: [[3,5],[3,5],[2,5],[2,5],[3,5],[3,5]] },  // Pos 4 - A form
     { ranges: [[5,8],[5,7],[5,7],[5,7],[5,8],[5,8]] },            // Pos 5 - G form
   ];
 
@@ -2908,17 +2908,17 @@ function _getPentaPositions(rootNote, mode) {
     });
 
     // 노트 컬러 — 포지션 선택과 무관하게 항상 동일
-    const noteColorFn = (fret, sIdx, note, _role) => {
-      const posNum = fretPosMap.get(`${sIdx}-${fret}`);
-      const c = posNum
-        ? _PENTA_POS_COLORS[posNum]
-        : { fill: '#9ca3af', stroke: '#6b7280', textFill: '#fff' };
-      return {
-        fill: c.fill, stroke: c.stroke, textFill: c.textFill,
-        dotR: note === rootNote ? 11 : 9,
-        label: note, opacity: 1,
-      };
-    };
+const noteColorFn = (fret, sIdx, note, _role) => {
+  const isRoot = note === rootNote;
+  return {
+    fill:     isRoot ? '#f97316' : '#ffffff',
+    stroke:   isRoot ? '#c2410c' : '#94a3b8',
+    textFill: isRoot ? '#fff'    : '#374151',
+    dotR:     isRoot ? 11 : 9,
+    label:    note,
+    opacity:  1,
+  };
+};
 
     Fretboard.render('penta-full', {
       rootNote,
