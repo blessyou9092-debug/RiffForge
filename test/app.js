@@ -2846,21 +2846,28 @@ function _getPentaPositions(rootNote, mode) {
 }
   // Root별 CAGED 박스 계산 (C Major 기준 데이터를 반음 shift)
   // minor는 relative major (+3반음)로 환산하여 동일 박스 데이터 사용
-  function _computeBoxesForRoot(rootNote, mode) {
-    const rootSemi = KEY_SEMITONES[rootNote] || 0;
-    const refSemi  = mode === 'minor' ? (rootSemi + 3) % 12 : rootSemi;
-    let shift = refSemi > 6 ? refSemi - 12 : refSemi;
+function _computeBoxesForRoot(rootNote, mode) {
+  const rootSemi = KEY_SEMITONES[rootNote] || 0;
+  const refSemi  = mode === 'minor' ? (rootSemi + 3) % 12 : rootSemi;
+  let shift = refSemi > 6 ? refSemi - 12 : refSemi;
 
-    return PENTA_CAGED_BOXES.map(box => {
-      const perString = box.ranges.map(([lo, hi], j) => {
-        let nLo = lo + shift, nHi = hi + shift;
-        if (nLo < 0)  { nLo += 12; nHi += 12; }
-        if (nHi > 17) { nLo -= 12; nHi -= 12; }
-        return { s: j, lo: nLo, hi: nHi }; // j=0→s=0(6번줄), j=5→s=5(1번줄)
-      });
-      return { perString };
-    });
-  }
+  return PENTA_CAGED_BOXES.map(box => {
+    // 6번줄(index 0)을 기준으로 포지션 전체의 옥타브 보정 결정
+    const refLo = box.ranges[0][0] + shift;
+    const refHi = box.ranges[0][1] + shift;
+    let octAdj = 0;
+    if (refLo < 0)  octAdj = 12;
+    else if (refHi > 17) octAdj = -12;
+
+    // 모든 줄에 동일한 옥타브 보정 적용, 남은 경계값은 clamp
+    const perString = box.ranges.map(([lo, hi], j) => ({
+      s:  j,
+      lo: Math.max(0,  lo + shift + octAdj),
+      hi: Math.min(17, hi + shift + octAdj),
+    }));
+    return { perString };
+  });
+}
 
 
 
@@ -2892,20 +2899,31 @@ function _getPentaPositions(rootNote, mode) {
       });
     });
 
-    // 배경 박스 목록 (선택된 포지션만 진하게, 나머지 흐리게)
-    const positionBoxes = [];
-    boxes.forEach((box, i) => {
-      const posNum   = i + 1;
-      const isActive = _pentaPos === 0 || _pentaPos === posNum;
-      const color    = _PENTA_POS_COLORS[posNum].fill;
-      const opacity  = isActive ? 0.25 : 0.07;
-      positionBoxes.push({ color, opacity, perString: box.perString });
-      // +12 옥타브 반복 박스
-      const repeat = box.perString
-        .map(({ s, lo, hi }) => ({ s, lo: lo + 12, hi: Math.min(hi + 12, 17) }))
-        .filter(({ lo }) => lo <= 17);
-      if (repeat.length) positionBoxes.push({ color, opacity, perString: repeat });
-    });
+   // background boxes (selected=0.25 opacity, others=0.07)
+const positionBoxes = [];
+boxes.forEach((box, i) => {
+  const posNum   = i + 1;
+  const isActive = _pentaPos === 0 || _pentaPos === posNum;
+  const color    = _PENTA_POS_COLORS[posNum].fill;
+  const opacity  = isActive ? 0.25 : 0.07;
+  positionBoxes.push({ color, opacity, perString: box.perString });
+
+  // +12 repeat: 저음 포지션 → 지판 고음 영역에도 표시
+  const repeatUp = box.perString
+    .map(({ s, lo, hi }) => ({ s, lo: lo + 12, hi: Math.min(hi + 12, 17) }))
+    .filter(({ lo }) => lo <= 17);
+  if (repeatUp.length) positionBoxes.push({ color, opacity, perString: repeatUp });
+
+  // -12 repeat: 고음 영역으로 밀린 포지션 → 저음 옥타브 빈 구간 채우기
+  // 6번줄(기준줄) lo >= 12 일 때만 적용
+  if (box.perString[0].lo >= 12) {
+    const repeatDown = box.perString
+      .map(({ s, lo, hi }) => ({ s, lo: Math.max(0, lo - 12), hi: hi - 12 }))
+      .filter(({ hi }) => hi >= 0);
+    if (repeatDown.length) positionBoxes.push({ color, opacity, perString: repeatDown });
+  }
+});
+
 
     // 노트 컬러 — 포지션 선택과 무관하게 항상 동일
 const noteColorFn = (fret, sIdx, note, _role) => {
