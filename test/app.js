@@ -2305,26 +2305,22 @@ function renderGenreCards() {
 
 
 // ═══════════════════════════════════════════════════════════════════════════
-// ═══════════════════════════════════════════════════════════════════════════
-// ReferenceUI: 참고 자료 탭 관리  (Phase 8 완전 재작성)
-// ─ 트라이어드: 실제 지판 스팬 기반 폼 탐색 + 최저음으로 전위 판별
-// ─ 펜타토닉: CAGED 루트 오프셋 기반 이동형 박스 알고리즘
-// ─ 코드톤: 역할별 고정 색상 전역 렌더링
+// ReferenceUI: 참고 자료 탭 관리  (Phase 9 — Triad / Four-Note 완전 분리)
+// ─ 트라이어드     : 3화음(major/minor/dim/aug)의 전위(Root/1st/2nd) 학습
+//                   · String Set(1-3, 2-4, 3-5, 4-6)별 폼 탐색
+// ─ 포 노트 보이싱 : 7th 코드(maj7/dom7/m7/m7b5/dim7)의 루트 선별 배치 학습
+//                   · Root 위치(6/5/4/3번선)에 따라 R-3-5-7 인터벌 배치
+// ─ 펜타토닉       : CAGED 루트 오프셋 기반 이동형 박스 알고리즘
+// ─ 코드톤         : 역할별 고정 색상 전역 렌더링
 // ═══════════════════════════════════════════════════════════════════════════
 
-// ═══════════════════════════════════════════════════════════════════════════
-// ReferenceUI — Phase 8  (v9 알고리즘 이식 버전)
-// ─ 트라이어드 : C 기준 절대 프렛 폼 + semOff 시프트 (dotsForKey 방식)
-// ─ 펜타토닉   : 5A줄 루트 기준 PENTA_POS_OFFSETS 이동형 박스
-// ─ 코드톤     : 역할별 색상 전역 렌더 (R=빨, 3=초, 5=파, 7=보)
-// ═══════════════════════════════════════════════════════════════════════════
 const ReferenceUI = (() => {
 
   // ── 상태 ────────────────────────────────────────────────────────────────
   let activeTab = 'circle';
   let _triadRoot = 'C';
-  let _triadType = 'major';   // 'major'|'minor'|'dim'|'aug'|'7'|'maj7'|'m7'|'m7b5'
-  let _triadVoicing = 'all';  // 'all'|'root'|'1st'|'2nd'|'3rd'
+  let _triadType = 'major';   // 'major' | 'minor' | 'dim' | 'aug'
+  let _triadVoicing = 'all';  // 'all' | 'root' | '1st' | '2nd'
   let _triadStrGroup = '123'; // '123'|'234'|'345'|'456'
   let _triadLabelMode = 'interval'; // 'interval' | 'note'
   let _pentaPos = 0;         // 0=All, 1~5
@@ -2332,9 +2328,10 @@ const ReferenceUI = (() => {
   let _chordToneRoot = 'A';
   let _chordToneType = 'major';
   let _chordToneLabelMode = 'interval'; // 'interval' | 'note'
-let _fourNoteRoot    = 'C';
-let _fourNoteRootStr = 0;   // 0=6번선, 1=5번선, 2=4번선, 3=3번선
-let _fourNoteType    = 'major';
+  // 포 노트 보이싱: 7th 코드 전담
+  let _fourNoteRoot    = 'C';
+  let _fourNoteRootStr = 0;   // 0=6번선, 1=5번선, 2=4번선, 3=3번선
+  let _fourNoteType    = 'maj7';
 
   // ── 공통 상수 ────────────────────────────────────────────────────────────
   // 개방현 MIDI (strIdx 0=1번e, 1=2번B, 2=3번G, 3=4번D, 4=5번A, 5=6번E)
@@ -2396,42 +2393,7 @@ const FN_CHORD_FORMULA = {
   // ══════════════════════════════════════════════════════════════════════
 
   // v9 String Set 그룹 매핑: '123'→strings=[2,1,0], '234'→[3,2,1], ...
-  // v9에서 strings는 [고음줄idx, ..., 저음줄idx] (0=1e, 5=6E)
-  function _is7thChord(t) { return t === '7' || t === 'maj7' || t === 'm7' || t === 'm7b5'; }
 
-  // 7th 모드 ↔ triad 모드 UI 동기화
-  function _sync7thUI(is7th) {
-    const btn456 = document.querySelector('[data-strgrp="456"]');
-    if (btn456) btn456.style.display = is7th ? 'none' : '';
-    const btn3rd = document.querySelector('[data-voicing="3rd"]');
-    if (btn3rd) btn3rd.style.display = is7th ? '' : 'none';
-    // 스트링 그룹 버튼 라벨 변경
-    const labels = is7th
-      ? { '123': '1-2-3-4', '234': '2-3-4-5', '345': '3-4-5-6' }
-      : { '123': '1-2-3',   '234': '2-3-4',   '345': '3-4-5'   };
-    Object.entries(labels).forEach(([g, lbl]) => {
-      const btn = document.querySelector(`[data-strgrp="${g}"]`);
-      if (btn) btn.textContent = lbl;
-    });
-    // 7th 모드로 전환 시 '456' 그룹에 있었다면 '345'로 리셋
-    if (is7th && _triadStrGroup === '456') {
-      _triadStrGroup = '345';
-      document.querySelectorAll('.strgrp-btn').forEach(b => {
-        const on = b.dataset.strgrp === '345';
-        b.classList.toggle('bg-indigo-500', on); b.classList.toggle('text-white', on);
-        b.classList.toggle('bg-white', !on); b.classList.toggle('text-gray-600', !on);
-      });
-    }
-    // 3rd Inv 선택 상태에서 triad 모드로 전환 시 'all' 리셋
-    if (!is7th && _triadVoicing === '3rd') {
-      _triadVoicing = 'all';
-      document.querySelectorAll('.voicing-btn').forEach(b => {
-        const on = b.dataset.voicing === 'all';
-        b.classList.toggle('bg-gray-700', on); b.classList.toggle('text-white', on);
-        b.classList.toggle('bg-white', !on); b.classList.toggle('text-gray-600', !on);
-      });
-    }
-  }
 
   const _V9_STR_SETS = {
     '123': 0, // String Set 1
@@ -2570,94 +2532,6 @@ const FN_CHORD_FORMULA = {
         },
       ]
     },
-        '7': {
-      sets: [
-        { strings: [3,2,1,0], vc: [
-          { name: 'Root',    dots: [{s:3,f:10,r:'R'},{s:2,f:9,r:'3'},{s:1,f:8,r:'5'},{s:0,f:6,r:'b7'}] },
-          { name: '1st Inv', dots: [{s:3,f:2,r:'3'},{s:2,f:3,r:'b7'},{s:1,f:1,r:'R'},{s:0,f:3,r:'5'}] },
-          { name: '2nd Inv', dots: [{s:3,f:5,r:'5'},{s:2,f:5,r:'R'},{s:1,f:5,r:'3'},{s:0,f:6,r:'b7'}] },
-          { name: '3rd Inv', dots: [{s:3,f:8,r:'b7'},{s:2,f:9,r:'3'},{s:1,f:8,r:'5'},{s:0,f:8,r:'R'}] },
-        ]},
-        { strings: [4,3,2,1], vc: [
-          { name: 'Root',    dots: [{s:4,f:3,r:'R'},{s:3,f:5,r:'5'},{s:2,f:3,r:'b7'},{s:1,f:5,r:'3'}] },
-          { name: '1st Inv', dots: [{s:4,f:7,r:'3'},{s:3,f:8,r:'b7'},{s:2,f:5,r:'R'},{s:1,f:8,r:'5'}] },
-          { name: '2nd Inv', dots: [{s:4,f:10,r:'5'},{s:3,f:10,r:'R'},{s:2,f:9,r:'3'},{s:1,f:11,r:'b7'}] },
-          { name: '3rd Inv', dots: [{s:4,f:13,r:'b7'},{s:3,f:14,r:'3'},{s:2,f:12,r:'5'},{s:1,f:13,r:'R'}] },
-        ]},
-        { strings: [5,4,3,2], vc: [
-          { name: 'Root',    dots: [{s:5,f:8,r:'R'},{s:4,f:10,r:'5'},{s:3,f:8,r:'b7'},{s:2,f:9,r:'3'}] },
-          { name: '1st Inv', dots: [{s:5,f:12,r:'3'},{s:4,f:13,r:'b7'},{s:3,f:10,r:'R'},{s:2,f:12,r:'5'}] },
-          { name: '2nd Inv', dots: [{s:5,f:3,r:'5'},{s:4,f:3,r:'R'},{s:3,f:2,r:'3'},{s:2,f:3,r:'b7'}] },
-          { name: '3rd Inv', dots: [{s:5,f:6,r:'b7'},{s:4,f:7,r:'3'},{s:3,f:5,r:'5'},{s:2,f:5,r:'R'}] },
-        ]},
-      ]
-    },
-    'maj7': {
-      sets: [
-        { strings: [3,2,1,0], vc: [
-          { name: 'Root',    dots: [{s:3,f:10,r:'R'},{s:2,f:9,r:'3'},{s:1,f:8,r:'5'},{s:0,f:7,r:'7'}] },
-          { name: '1st Inv', dots: [{s:3,f:2,r:'3'},{s:2,f:4,r:'7'},{s:1,f:1,r:'R'},{s:0,f:3,r:'5'}] },
-          { name: '2nd Inv', dots: [{s:3,f:5,r:'5'},{s:2,f:5,r:'R'},{s:1,f:5,r:'3'},{s:0,f:7,r:'7'}] },
-          { name: '3rd Inv', dots: [{s:3,f:9,r:'7'},{s:2,f:9,r:'3'},{s:1,f:8,r:'5'},{s:0,f:8,r:'R'}] },
-        ]},
-        { strings: [4,3,2,1], vc: [
-          { name: 'Root',    dots: [{s:4,f:3,r:'R'},{s:3,f:5,r:'5'},{s:2,f:4,r:'7'},{s:1,f:5,r:'3'}] },
-          { name: '1st Inv', dots: [{s:4,f:7,r:'3'},{s:3,f:9,r:'7'},{s:2,f:5,r:'R'},{s:1,f:8,r:'5'}] },
-          { name: '2nd Inv', dots: [{s:4,f:10,r:'5'},{s:3,f:10,r:'R'},{s:2,f:9,r:'3'},{s:1,f:12,r:'7'}] },
-          { name: '3rd Inv', dots: [{s:4,f:14,r:'7'},{s:3,f:14,r:'3'},{s:2,f:12,r:'5'},{s:1,f:13,r:'R'}] },
-        ]},
-        { strings: [5,4,3,2], vc: [
-          { name: 'Root',    dots: [{s:5,f:8,r:'R'},{s:4,f:10,r:'5'},{s:3,f:9,r:'7'},{s:2,f:9,r:'3'}] },
-          { name: '1st Inv', dots: [{s:5,f:0,r:'3'},{s:4,f:2,r:'7'},{s:3,f:5,r:'5'},{s:2,f:5,r:'R'}] },
-          { name: '2nd Inv', dots: [{s:5,f:3,r:'5'},{s:4,f:3,r:'R'},{s:3,f:2,r:'3'},{s:2,f:4,r:'7'}] },
-          { name: '3rd Inv', dots: [{s:5,f:7,r:'7'},{s:4,f:7,r:'3'},{s:3,f:5,r:'5'},{s:2,f:5,r:'R'}] },
-        ]},
-      ]
-    },
-    'm7': {
-      sets: [
-        { strings: [3,2,1,0], vc: [
-          { name: 'Root',    dots: [{s:3,f:10,r:'R'},{s:2,f:8,r:'b3'},{s:1,f:8,r:'5'},{s:0,f:6,r:'b7'}] },
-          { name: '1st Inv', dots: [{s:3,f:1,r:'b3'},{s:2,f:3,r:'b7'},{s:1,f:1,r:'R'},{s:0,f:3,r:'5'}] },
-          { name: '2nd Inv', dots: [{s:3,f:5,r:'5'},{s:2,f:5,r:'R'},{s:1,f:4,r:'b3'},{s:0,f:6,r:'b7'}] },
-          { name: '3rd Inv', dots: [{s:3,f:8,r:'b7'},{s:2,f:8,r:'b3'},{s:1,f:8,r:'5'},{s:0,f:8,r:'R'}] },
-        ]},
-        { strings: [4,3,2,1], vc: [
-          { name: 'Root',    dots: [{s:4,f:3,r:'R'},{s:3,f:5,r:'5'},{s:2,f:3,r:'b7'},{s:1,f:4,r:'b3'}] },
-          { name: '1st Inv', dots: [{s:4,f:6,r:'b3'},{s:3,f:8,r:'b7'},{s:2,f:5,r:'R'},{s:1,f:8,r:'5'}] },
-          { name: '2nd Inv', dots: [{s:4,f:10,r:'5'},{s:3,f:10,r:'R'},{s:2,f:8,r:'b3'},{s:1,f:11,r:'b7'}] },
-          { name: '3rd Inv', dots: [{s:4,f:13,r:'b7'},{s:3,f:13,r:'b3'},{s:2,f:12,r:'5'},{s:1,f:13,r:'R'}] },
-        ]},
-        { strings: [5,4,3,2], vc: [
-          { name: 'Root',    dots: [{s:5,f:8,r:'R'},{s:4,f:10,r:'5'},{s:3,f:8,r:'b7'},{s:2,f:8,r:'b3'}] },
-          { name: '1st Inv', dots: [{s:5,f:11,r:'b3'},{s:4,f:13,r:'b7'},{s:3,f:10,r:'R'},{s:2,f:12,r:'5'}] },
-          { name: '2nd Inv', dots: [{s:5,f:3,r:'5'},{s:4,f:3,r:'R'},{s:3,f:1,r:'b3'},{s:2,f:3,r:'b7'}] },
-          { name: '3rd Inv', dots: [{s:5,f:6,r:'b7'},{s:4,f:6,r:'b3'},{s:3,f:5,r:'5'},{s:2,f:5,r:'R'}] },
-        ]},
-      ]
-    },
-    'm7b5': {
-      sets: [
-        { strings: [3,2,1,0], vc: [
-          { name: 'Root',    dots: [{s:3,f:10,r:'R'},{s:2,f:8,r:'b3'},{s:1,f:7,r:'b5'},{s:0,f:6,r:'b7'}] },
-          { name: '1st Inv', dots: [{s:3,f:1,r:'b3'},{s:2,f:3,r:'b7'},{s:1,f:1,r:'R'},{s:0,f:2,r:'b5'}] },
-          { name: '2nd Inv', dots: [{s:3,f:4,r:'b5'},{s:2,f:5,r:'R'},{s:1,f:4,r:'b3'},{s:0,f:6,r:'b7'}] },
-          { name: '3rd Inv', dots: [{s:3,f:8,r:'b7'},{s:2,f:8,r:'b3'},{s:1,f:7,r:'b5'},{s:0,f:8,r:'R'}] },
-        ]},
-        { strings: [4,3,2,1], vc: [
-          { name: 'Root',    dots: [{s:4,f:3,r:'R'},{s:3,f:4,r:'b5'},{s:2,f:3,r:'b7'},{s:1,f:4,r:'b3'}] },
-          { name: '1st Inv', dots: [{s:4,f:6,r:'b3'},{s:3,f:8,r:'b7'},{s:2,f:5,r:'R'},{s:1,f:7,r:'b5'}] },
-          { name: '2nd Inv', dots: [{s:4,f:9,r:'b5'},{s:3,f:10,r:'R'},{s:2,f:8,r:'b3'},{s:1,f:11,r:'b7'}] },
-          { name: '3rd Inv', dots: [{s:4,f:13,r:'b7'},{s:3,f:13,r:'b3'},{s:2,f:11,r:'b5'},{s:1,f:13,r:'R'}] },
-        ]},
-        { strings: [5,4,3,2], vc: [
-          { name: 'Root',    dots: [{s:5,f:8,r:'R'},{s:4,f:9,r:'b5'},{s:3,f:8,r:'b7'},{s:2,f:8,r:'b3'}] },
-          { name: '1st Inv', dots: [{s:5,f:11,r:'b3'},{s:4,f:13,r:'b7'},{s:3,f:10,r:'R'},{s:2,f:11,r:'b5'}] },
-          { name: '2nd Inv', dots: [{s:5,f:2,r:'b5'},{s:4,f:3,r:'R'},{s:3,f:1,r:'b3'},{s:2,f:3,r:'b7'}] },
-          { name: '3rd Inv', dots: [{s:5,f:6,r:'b7'},{s:4,f:6,r:'b3'},{s:3,f:4,r:'b5'},{s:2,f:5,r:'R'}] },
-        ]},
-      ]
-    },
 
   };
 
@@ -2681,13 +2555,11 @@ const FN_CHORD_FORMULA = {
   // 역할 → RiffForge SVG 색상
   const _ROLE_COLORS = {
     'R':  { fill: '#f5a623', stroke: '#e09310', textFill: '#fff' },
-    '3':  { fill: '#0284c7', stroke: '#0369a1', textFill: '#fff' },
-    'b3': { fill: '#0284c7', stroke: '#0369a1', textFill: '#fff' },
+    '3':  { fill: '#10b981', stroke: '#047857', textFill: '#fff' },
+    'b3': { fill: '#10b981', stroke: '#047857', textFill: '#fff' },
     '5':  { fill: '#38bdf8', stroke: '#0ea5e9', textFill: '#fff' },
     'b5': { fill: '#38bdf8', stroke: '#0ea5e9', textFill: '#fff' },
     '#5': { fill: '#38bdf8', stroke: '#0ea5e9', textFill: '#fff' },
-    '7':  { fill: '#bae6fd', stroke: '#7dd3fc', textFill: '#0369a1' },
-    'b7': { fill: '#bae6fd', stroke: '#7dd3fc', textFill: '#0369a1' },
   };
 
 
@@ -2705,31 +2577,21 @@ const FN_CHORD_FORMULA = {
     const strSet = tv.sets[ssIdx];
     if (!strSet) return;
 
-    const shifted = _dotsForKey(strSet.vc, semOff); // [{name, dots}] 이미 key 적용됨
-    const is7th = _is7thChord(_triadType);
-    const _7thLabels = { '123': '1-2-3-4', '234': '2-3-4-5', '345': '3-4-5-6' };
-    const strLabel = is7th ? _7thLabels[_triadStrGroup] || _triadStrGroup : _triadStrGroup.split('').join('-');
-    // RiffForge: activeStrings Set (sIdx 기준, 0=6번줄)
-    // v9 strings = [2,1,0] → rfSIdx = [3,4,5]
+    const shifted = _dotsForKey(strSet.vc, semOff);
+    const strLabel = _triadStrGroup.split('').join('-');
     const activeStrings = new Set(strSet.strings.map(v9s => 5 - v9s));
 
-    // 전위명 매핑
-    const INV_NAME_MAP = { 'Root': 'root', '1st Inv': '1st', '2nd Inv': '2nd' };
     const invLabels = {
       root:  `Root Position · ${strLabel}번줄`,
       '1st': `1st Inversion · ${strLabel}번줄`,
       '2nd': `2nd Inversion · ${strLabel}번줄`,
-      '3rd': `3rd Inversion · ${strLabel}번줄`,
     };
-
 
     const voicings = [
       { key: 'root', shiftedVc: shifted.find(v => v.name === 'Root') },
       { key: '1st',  shiftedVc: shifted.find(v => v.name === '1st Inv') },
       { key: '2nd',  shiftedVc: shifted.find(v => v.name === '2nd Inv') },
-      { key: '3rd',  shiftedVc: shifted.find(v => v.name === '3rd Inv') },
     ];
-
 
     voicings.forEach(({ key, shiftedVc }) => {
       const containerId = `triad-fb-${key === 'root' ? 'root' : key}`;
@@ -2739,22 +2601,16 @@ const FN_CHORD_FORMULA = {
       if (wrap) wrap.style.display = show ? '' : 'none';
       if (!show || !shiftedVc) return;
 
-      // 라벨 업데이트
       const lbl = key === 'root'
         ? document.getElementById('triad-fb-root-label')
         : wrap?.querySelector('.inv-title');
       if (lbl) lbl.textContent = invLabels[key];
 
-      // 활성 도트 좌표 Set (rf sIdx 기준) → "rfSIdx-fret"
-      const activeSet = new Set(
-        shiftedVc.dots.map(d => `${5 - d.s}-${d.f}`)
-      );
+      const activeSet = new Set(shiftedVc.dots.map(d => `${5 - d.s}-${d.f}`));
 
-      // chordNoteMap: 구성음 노트이름 → role 문자열
-      // (모든 프렛에서 구성음이면 표시 가능)
       const chordNoteMap = new Map();
       shiftedVc.dots.forEach(d => {
-        const note = CONFIG.NOTES[(V9_OPEN[d.s] + d.f) % 12]; // v9 인덱스로 음이름 계산
+        const note = CONFIG.NOTES[(V9_OPEN[d.s] + d.f) % 12];
         chordNoteMap.set(note, d.r);
       });
 
@@ -2763,14 +2619,14 @@ const FN_CHORD_FORMULA = {
         if (!activeSet.has(k)) {
           return { fill: '#d1d5db', stroke: '#9ca3af', textFill: '#9ca3af', dotR: 8, label: note, opacity: 0.12 };
         }
-        // 해당 도트의 role 직접 확인
         const dot = shiftedVc.dots.find(d => (5 - d.s) === sIdx && d.f === fret);
         const r = dot?.r || role || 'R';
         const c = _ROLE_COLORS[r] || _ROLE_COLORS['R'];
         return {
           fill: c.fill, stroke: c.stroke, textFill: c.textFill,
-          dotR: r === 'R' ? 11 : 9, label: _triadLabelMode === 'note' ? note : r, opacity: 1
-
+          dotR: r === 'R' ? 11 : 9,
+          label: _triadLabelMode === 'note' ? note : r,
+          opacity: 1,
         };
       };
 
@@ -2781,7 +2637,6 @@ const FN_CHORD_FORMULA = {
         labelMode: 'note',
       });
 
-      // 소제목 보장 (1st, 2nd wrap)
       if (key !== 'root') {
         const container = document.getElementById(containerId);
         if (container) {
@@ -2796,6 +2651,227 @@ const FN_CHORD_FORMULA = {
       }
     });
   }
+  // ══════════════════════════════════════════════════════════════════════
+  // ② 포 노트 보이싱 — 7th 코드(maj7/dom7/m7/m7b5/dim7) 전담
+  // ══════════════════════════════════════════════════════════════════════
+
+  const FOUR_NOTE_TYPES = {
+    'maj7':  [0, 4, 7, 11],
+    'dom7':  [0, 4, 7, 10],
+    'm7':    [0, 3, 7, 10],
+    'm7b5':  [0, 3, 6, 10],
+    'dim7':  [0, 3, 6,  9],
+  };
+
+  const FN_STR_OFFSETS = [0, 5, 10, 15, 19, 24];
+
+  const FN_INTERVAL_LABELS = {
+    0:'R', 3:'♭3', 4:'3', 6:'♭5', 7:'5', 9:'°7', 10:'♭7', 11:'7', 12:'R'
+  };
+
+  const FN_ROLE_COLORS = {
+    0:  { fill:'#f5a623', stroke:'#d4891a', textFill:'#fff' },
+    12: { fill:'#f5a623', stroke:'#d4891a', textFill:'#fff' },
+    4:  { fill:'#10b981', stroke:'#047857', textFill:'#fff' },
+    3:  { fill:'#10b981', stroke:'#047857', textFill:'#fff' },
+    7:  { fill:'#38bdf8', stroke:'#0369a1', textFill:'#fff' },
+    6:  { fill:'#38bdf8', stroke:'#0369a1', textFill:'#fff' },
+    11: { fill:'#8b5cf6', stroke:'#6d28d9', textFill:'#fff' },
+    10: { fill:'#8b5cf6', stroke:'#6d28d9', textFill:'#fff' },
+    9:  { fill:'#8b5cf6', stroke:'#6d28d9', textFill:'#fff' },
+  };
+
+  const FN_STR_NAMES = ['6번선', '5번선', '4번선', '3번선'];
+
+  const FN_VOICING_RULES = {
+    0: { title:'6번선 Root 보이싱', layout:'4번선 7th · 3번선 3rd · 2번선 5th', mute:'5번선 생략' },
+    1: { title:'5번선 Root 보이싱', layout:'4번선 5th · 3번선 7th · 2번선 3rd', mute:'6번선 생략' },
+    2: { title:'4번선 Root 보이싱', layout:'3번선 5th · 2번선 7th · 1번선 3rd', mute:'5·6번선 생략' },
+    3: { title:'3번선 Root 보이싱', layout:'4번선 5th · 2번선 3rd · 1번선 7th', mute:'5·6번선 생략' },
+  };
+
+  const FN_CHORD_FORMULA = {
+    'maj7':'R · 3 · 5 · 7', 'dom7':'R · 3 · 5 · ♭7',
+    'm7':'R · ♭3 · 5 · ♭7', 'm7b5':'R · ♭3 · ♭5 · ♭7', 'dim7':'R · ♭3 · ♭5 · °7',
+  };
+
+  const FN_CHORD_DISPLAY_NAME = {
+    'maj7':'maj7', 'dom7':'7', 'm7':'m7', 'm7b5':'m7♭5', 'dim7':'dim7',
+  };
+
+  function _calcFourNoteVoicing(rootNote, rootStrIdx, chordType) {
+    const rootSemi  = KEY_SEMITONES[rootNote] || 0;
+    const r         = rootStrIdx;
+    const intervals = FOUR_NOTE_TYPES[chordType] || FOUR_NOTE_TYPES['maj7'];
+    const rootFret0 = (rootSemi - CONFIG.STANDARD_TUNING[r] + 12) % 12;
+
+    let strings, ivs;
+    if (r <= 2) {
+      strings = [r, r+1, r+2, r+3];
+      ivs     = intervals;
+    } else {
+      strings = [2, 3, 4, 5];
+      ivs     = [intervals[3], intervals[0], intervals[1], intervals[2]];
+    }
+
+    function computeDots(rootFret) {
+      return strings.map((s, i) => {
+        let fret = rootFret + ivs[i] + FN_STR_OFFSETS[r] - FN_STR_OFFSETS[s];
+        while (fret < 0)  fret += 12;
+        while (fret > 17) fret -= 12;
+        return { s, fret, interval: ivs[i] };
+      });
+    }
+
+    const d0   = computeDots(rootFret0);
+    const span = ds => Math.max(...ds.map(d => d.fret)) - Math.min(...ds.map(d => d.fret));
+    const s0   = span(d0);
+
+    let dots;
+    if (s0 <= 4 || rootFret0 + 12 > 17) {
+      dots = d0;
+    } else {
+      const d12 = computeDots(rootFret0 + 12);
+      dots = span(d12) < s0 ? d12 : d0;
+    }
+
+    const frets     = dots.map(d => d.fret);
+    const minFret   = Math.min(...frets);
+    const maxFret   = Math.max(...frets);
+    const startFret = Math.max(0, minFret - 1);
+    const endFret   = Math.max(maxFret + 1, startFret + 4);
+    const usedStrings = new Set(dots.map(d => d.s));
+    const mutedStrings = [];
+    for (let s = 0; s < 6; s++) { if (!usedStrings.has(s)) mutedStrings.push(s); }
+
+    return { dots, startFret, endFret, mutedStrings };
+  }
+
+  function _renderFourNoteLegend() {
+    const legendEl = document.getElementById('fournote-legend');
+    if (!legendEl) return;
+    const currentIntervals = FOUR_NOTE_TYPES[_fourNoteType] || FOUR_NOTE_TYPES['maj7'];
+    const roleGroups = [
+      { label:'Root', intervals:[0],      desc:'근음' },
+      { label:'3rd',  intervals:[3,4],    desc:'3음 (장/단 3도)' },
+      { label:'5th',  intervals:[6,7],    desc:'5음 (완전/감 5도)' },
+      { label:'7th',  intervals:[9,10,11],desc:'7음 (장/단/감 7도)' },
+    ];
+    legendEl.innerHTML = roleGroups.map(group => {
+      const activeIvs = group.intervals.filter(iv => currentIntervals.includes(iv));
+      if (!activeIvs.length) return '';
+      const iv = activeIvs[0];
+      const color = FN_ROLE_COLORS[iv];
+      const activeLabels = activeIvs.map(i => FN_INTERVAL_LABELS[i]).join(' / ');
+      return `<div class="flex items-center gap-2 text-xs">
+        <span class="inline-block w-4 h-4 rounded-full border-2"
+              style="background:${color.fill};border-color:${color.stroke};"></span>
+        <span class="font-bold text-gray-700">${activeLabels}</span>
+        <span class="text-gray-500">${group.desc}</span>
+      </div>`;
+    }).filter(Boolean).join('');
+  }
+
+  function _renderFourNoteRuleHint() {
+    const hintEl = document.getElementById('fournote-rule-hint');
+    if (!hintEl) return;
+    const rule = FN_VOICING_RULES[_fourNoteRootStr];
+    if (!rule) { hintEl.innerHTML = ''; return; }
+    hintEl.innerHTML = `
+      <div class="bg-amber-50 border border-amber-200 rounded-md px-3 py-2 text-xs">
+        <div class="font-bold text-amber-800 mb-0.5">${rule.title}</div>
+        <div class="text-gray-700"><span class="font-semibold">배치:</span> ${rule.layout}</div>
+        <div class="text-gray-500"><span class="font-semibold">생략:</span> ${rule.mute}</div>
+      </div>`;
+  }
+
+  function renderFourNote() {
+    const { dots, startFret, endFret, mutedStrings } = _calcFourNoteVoicing(
+      _fourNoteRoot, _fourNoteRootStr, _fourNoteType
+    );
+    const activeSet   = new Set(dots.map(d => `${d.s}-${d.fret}`));
+    const dotMap      = new Map(dots.map(d => [`${d.s}-${d.fret}`, d]));
+    const usedStrings = new Set(dots.map(d => d.s));
+
+    const chordNoteMap = new Map();
+    dots.forEach(d => {
+      const note = CONFIG.NOTES[(CONFIG.STANDARD_TUNING[d.s] + d.fret) % 12];
+      if (!chordNoteMap.has(note)) chordNoteMap.set(note, FN_INTERVAL_LABELS[d.interval] || 'R');
+    });
+
+    const noteColorFn = (fret, sIdx, note, _role) => {
+      const k = `${sIdx}-${fret}`;
+      if (activeSet.has(k)) {
+        const dot = dotMap.get(k);
+        const I   = dot?.interval ?? 0;
+        const c   = FN_ROLE_COLORS[I] || FN_ROLE_COLORS[0];
+        return { fill:c.fill, stroke:c.stroke, textFill:c.textFill,
+          dotR:(I===0||I===12)?11:9, label:FN_INTERVAL_LABELS[I]??note, opacity:1 };
+      }
+      if (usedStrings.has(sIdx))
+        return { fill:'#e5e7eb', stroke:'#d1d5db', textFill:'#9ca3af', dotR:7, label:'', opacity:0.18 };
+      return { fill:'#e5e7eb', stroke:'#d1d5db', textFill:'#9ca3af', dotR:6, label:'', opacity:0.08 };
+    };
+
+    Fretboard.render('fournote-fb', {
+      rootNote: _fourNoteRoot,
+      chordNoteMap, noteColorFn, startFret, endFret,
+      activeStrings: new Set(usedStrings),
+    });
+
+    const labelEl = document.getElementById('fournote-fb-label');
+    if (labelEl) {
+      const displayName = FN_CHORD_DISPLAY_NAME[_fourNoteType] || _fourNoteType;
+      labelEl.textContent =
+        `${_fourNoteRoot}${displayName} · ${FN_STR_NAMES[_fourNoteRootStr]} Root · ` +
+        `${FN_CHORD_FORMULA[_fourNoteType]} (${startFret}–${endFret}fr)`;
+    }
+
+    const muteEl = document.getElementById('fournote-mute-info');
+    if (muteEl) {
+      const rfMuted = mutedStrings.map(s => `${6-s}번선`).sort((a,b)=>b.localeCompare(a));
+      muteEl.innerHTML = rfMuted.length
+        ? `<span class="text-gray-500 text-xs">✕ 뮤트: ${rfMuted.join(', ')}</span>` : '';
+    }
+
+    _renderFourNoteLegend();
+    _renderFourNoteRuleHint();
+  }
+
+  function setFourNoteRoot(note) {
+    _fourNoteRoot = note;
+    renderFourNote();
+  }
+
+  function setFourNoteRootStr(idx) {
+    _fourNoteRootStr = +idx;
+    document.querySelectorAll('.fn-str-btn').forEach(btn => {
+      const on = +btn.dataset.fnstr === _fourNoteRootStr;
+      btn.classList.toggle('bg-amber-500', on);
+      btn.classList.toggle('text-white', on);
+      btn.classList.toggle('border-transparent', on);
+      btn.classList.toggle('bg-white', !on);
+      btn.classList.toggle('text-gray-600', !on);
+      btn.classList.toggle('border-gray-200', !on);
+    });
+    renderFourNote();
+  }
+
+  function setFourNoteType(type) {
+    if (!FOUR_NOTE_TYPES[type]) type = 'maj7';
+    _fourNoteType = type;
+    document.querySelectorAll('.fn-type-btn').forEach(btn => {
+      const on = btn.dataset.fntype === type;
+      btn.classList.toggle('bg-amber-500', on);
+      btn.classList.toggle('text-white', on);
+      btn.classList.toggle('border-transparent', on);
+      btn.classList.toggle('bg-white', !on);
+      btn.classList.toggle('text-gray-600', !on);
+      btn.classList.toggle('border-gray-200', !on);
+    });
+    renderFourNote();
+  }
+
 function _calcFourNoteVoicing(rootNote, rootStrIdx, chordType) {
   const rootSemi  = KEY_SEMITONES[rootNote] || 0;
   const r         = rootStrIdx;
