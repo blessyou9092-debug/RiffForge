@@ -2332,6 +2332,9 @@ const ReferenceUI = (() => {
   let _chordToneRoot = 'A';
   let _chordToneType = 'major';
   let _chordToneLabelMode = 'interval'; // 'interval' | 'note'
+let _fourNoteRoot    = 'C';
+let _fourNoteRootStr = 0;   // 0=6번선, 1=5번선, 2=4번선, 3=3번선
+let _fourNoteType    = 'major';
 
   // ── 공통 상수 ────────────────────────────────────────────────────────────
   // 개방현 MIDI (strIdx 0=1번e, 1=2번B, 2=3번G, 3=4번D, 4=5번A, 5=6번E)
@@ -2346,6 +2349,45 @@ const ReferenceUI = (() => {
     'C': 0, 'C#': 1, 'Db': 1, 'D': 2, 'Eb': 3, 'E': 4,
     'F': 5, 'F#': 6, 'Gb': 6, 'G': 7, 'Ab': 8, 'A': 9, 'Bb': 10, 'B': 11,
   };
+const FOUR_NOTE_TYPES = {
+  'major': [0, 4, 7, 12],
+  'minor': [0, 3, 7, 12],
+  'maj7':  [0, 4, 7, 11],
+  'dom7':  [0, 4, 7, 10],
+  'm7':    [0, 3, 7, 10],
+  'm7b5':  [0, 3, 6, 10],
+  'dim':   [0, 3, 6,  9],
+};
+
+// 6번선 기준 각 줄의 절대 반음 오프셋 (MIDI: 40,45,50,55,59,64)
+const FN_STR_OFFSETS = [0, 5, 10, 15, 19, 24];
+
+const FN_INTERVAL_LABELS = {
+  0:'R', 3:'♭3', 4:'3', 6:'♭5', 7:'5', 9:'°7', 10:'♭7', 11:'7', 12:'R'
+};
+
+const FN_ROLE_COLORS = {
+  0:  { fill:'#f5a623', stroke:'#d4891a', textFill:'#fff' },
+  12: { fill:'#f5a623', stroke:'#d4891a', textFill:'#fff' },
+  4:  { fill:'#bae6fd', stroke:'#0284c7', textFill:'#0c4a6e' },
+  3:  { fill:'#bae6fd', stroke:'#0284c7', textFill:'#0c4a6e' },
+  7:  { fill:'#38bdf8', stroke:'#0369a1', textFill:'#fff' },
+  6:  { fill:'#38bdf8', stroke:'#0369a1', textFill:'#fff' },
+  11: { fill:'#3b82f6', stroke:'#1d4ed8', textFill:'#fff' },
+  10: { fill:'#3b82f6', stroke:'#1d4ed8', textFill:'#fff' },
+  9:  { fill:'#6366f1', stroke:'#4338ca', textFill:'#fff' },
+};
+
+const FN_STR_NAMES    = ['6번선', '5번선', '4번선', '3번선'];
+const FN_CHORD_FORMULA = {
+  'major': 'R · 3 · 5 · R(oct)',
+  'minor': 'R · ♭3 · 5 · R(oct)',
+  'maj7':  'R · 3 · 5 · 7',
+  'dom7':  'R · 3 · 5 · ♭7',
+  'm7':    'R · ♭3 · 5 · ♭7',
+  'm7b5':  'R · ♭3 · ♭5 · ♭7',
+  'dim':   'R · ♭3 · ♭5 · °7',
+};
 
   // ══════════════════════════════════════════════════════════════════════
   // ① 트라이어드 — v9 TRIAD_VOICINGS 이식
@@ -2754,6 +2796,129 @@ const ReferenceUI = (() => {
       }
     });
   }
+function _calcFourNoteVoicing(rootNote, rootStrIdx, chordType) {
+  const rootSemi  = KEY_SEMITONES[rootNote] || 0;
+  const r         = rootStrIdx;
+  const intervals = FOUR_NOTE_TYPES[chordType] || FOUR_NOTE_TYPES['major'];
+  const rootFret0 = (rootSemi - CONFIG.STANDARD_TUNING[r] + 12) % 12;
+
+  // r=3(3번선) 루트: 4번선을 아래에 추가
+  // 4번선 = intervals[3], 나머지는 순서대로
+  let strings, ivs;
+  if (r <= 2) {
+    strings = [r, r+1, r+2, r+3];
+    ivs     = intervals;
+  } else {
+    strings = [2, 3, 4, 5];
+    ivs     = [intervals[3], intervals[0], intervals[1], intervals[2]];
+  }
+
+  function computeDots(rootFret) {
+    return strings.map((s, i) => {
+      let fret = rootFret + ivs[i] + FN_STR_OFFSETS[r] - FN_STR_OFFSETS[s];
+      while (fret < 0)  fret += 12;
+      while (fret > 17) fret -= 12;
+      return { s, fret, interval: ivs[i] };
+    });
+  }
+
+  const d0   = computeDots(rootFret0);
+  const span = ds => Math.max(...ds.map(d => d.fret)) - Math.min(...ds.map(d => d.fret));
+  const s0   = span(d0);
+
+  let dots;
+  if (s0 <= 4 || rootFret0 + 12 > 17) {
+    dots = d0;
+  } else {
+    const d12 = computeDots(rootFret0 + 12);
+    dots = span(d12) < s0 ? d12 : d0;
+  }
+
+  const frets     = dots.map(d => d.fret);
+  const minFret   = Math.min(...frets);
+  const maxFret   = Math.max(...frets);
+  const startFret = Math.max(0, minFret - 1);
+  const endFret   = Math.max(maxFret + 1, startFret + 4);
+
+  return { dots, startFret, endFret };
+}
+function renderFourNote() {
+  const { dots, startFret, endFret } = _calcFourNoteVoicing(
+    _fourNoteRoot, _fourNoteRootStr, _fourNoteType
+  );
+
+  const activeSet = new Set(dots.map(d => `${d.s}-${d.fret}`));
+  const dotMap    = new Map(dots.map(d => [`${d.s}-${d.fret}`, d]));
+
+  const chordNoteMap = new Map();
+  dots.forEach(d => {
+    const note = CONFIG.NOTES[(CONFIG.STANDARD_TUNING[d.s] + d.fret) % 12];
+    if (!chordNoteMap.has(note))
+      chordNoteMap.set(note, FN_INTERVAL_LABELS[d.interval] || 'R');
+  });
+
+  const noteColorFn = (fret, sIdx, note, _role) => {
+    const k = `${sIdx}-${fret}`;
+    if (activeSet.has(k)) {
+      const dot = dotMap.get(k);
+      const I   = dot?.interval ?? 0;
+      const c   = FN_ROLE_COLORS[I] || FN_ROLE_COLORS[0];
+      return {
+        fill: c.fill, stroke: c.stroke, textFill: c.textFill,
+        dotR:  (I === 0 || I === 12) ? 11 : 9,
+        label: FN_INTERVAL_LABELS[I] ?? note,
+        opacity: 1,
+      };
+    }
+    return { fill:'#e5e7eb', stroke:'#d1d5db', textFill:'#9ca3af', dotR:7, label:'', opacity:0.18 };
+  };
+
+  Fretboard.render('fournote-fb', {
+    rootNote: _fourNoteRoot,
+    chordNoteMap, noteColorFn,
+    startFret, endFret,
+  });
+
+  const labelEl = document.getElementById('fournote-fb-label');
+  if (labelEl) {
+    labelEl.textContent =
+      `${_fourNoteRoot} ${_fourNoteType.toUpperCase()} · ` +
+      `${FN_STR_NAMES[_fourNoteRootStr]} 기준 · ` +
+      `${FN_CHORD_FORMULA[_fourNoteType]} (${startFret}–${endFret}fr)`;
+  }
+}
+function setFourNoteRoot(note) {
+  _fourNoteRoot = note;
+  renderFourNote();
+}
+
+function setFourNoteRootStr(idx) {
+  _fourNoteRootStr = +idx;
+  document.querySelectorAll('.fn-str-btn').forEach(btn => {
+    const on = +btn.dataset.fnstr === _fourNoteRootStr;
+    btn.classList.toggle('bg-amber-500',      on);
+    btn.classList.toggle('text-white',        on);
+    btn.classList.toggle('border-transparent', on);
+    btn.classList.toggle('bg-white',          !on);
+    btn.classList.toggle('text-gray-600',     !on);
+    btn.classList.toggle('border-gray-200',   !on);
+  });
+  renderFourNote();
+}
+
+function setFourNoteType(type) {
+  _fourNoteType = type;
+  document.querySelectorAll('.fn-type-btn').forEach(btn => {
+    const on = btn.dataset.fntype === type;
+    btn.classList.toggle('bg-amber-500',      on);
+    btn.classList.toggle('text-white',        on);
+    btn.classList.toggle('border-transparent', on);
+    btn.classList.toggle('bg-white',          !on);
+    btn.classList.toggle('text-gray-600',     !on);
+    btn.classList.toggle('border-gray-200',   !on);
+  });
+  renderFourNote();
+}
 
   // ══════════════════════════════════════════════════════════════════════
   // ② 펜타토닉 — v9 getPentaPositions 이식
@@ -3132,6 +3297,7 @@ const noteColorFn = (fret, sIdx, note, _role) => {
       _ensureTriadRootSelect();
       renderTriadDiagram();
     }, 50);
+    if (tabId === 'fournote') setTimeout(() => renderFourNote(), 50);
     if (tabId === 'chord') setTimeout(() => {
       _initChordToneRootSelect();
       renderChordToneRef();
@@ -3261,6 +3427,7 @@ const VCOLS = { all: 'bg-gray-700', root: 'bg-amber-500', '1st': 'bg-indigo-500'
     setPentaPos, setPentaKey,
     setCagedPos, setLabelMode, onScaleChange,
     setChordToneRoot, setChordToneType, setChordToneLabelMode,
+    setFourNoteRoot, setFourNoteRootStr, setFourNoteType, 
   };
 })();
 
