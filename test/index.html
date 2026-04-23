@@ -1480,6 +1480,11 @@
               class="ref-tab-btn px-4 py-2 rounded-xl text-sm font-bold transition-all bg-white text-gray-600 hover:bg-amber-50">
               🎸 트라이어드
             </button>
+            <button data-tab="fournote" onclick="ReferenceUI.switchTab('fournote')"
+  class="ref-tab-btn px-4 py-2 rounded-xl text-sm font-bold transition-all bg-white text-gray-600 hover:bg-amber-50">
+  🎵 포 노트
+</button>
+
             <button data-tab="penta" onclick="ReferenceUI.switchTab('penta')"
               class="ref-tab-btn px-4 py-2 rounded-xl text-sm font-bold transition-all bg-white text-gray-600 hover:bg-amber-50">
               🎵 펜타토닉
@@ -1786,6 +1791,72 @@
                 다이어그램은 추후 업데이트 예정입니다.</p>
             </div>
           </div>
+<!-- ── 탭: 포 노트 보이싱 ──────────────────────────────── -->
+<div data-panel="fournote" class="ref-tab-panel hidden">
+  <div class="bg-white rounded-2xl border border-amber-100 shadow-sm p-5 mb-4">
+
+    <!-- 헤더 + 루트 키 -->
+    <div class="flex items-center gap-3 flex-wrap mb-4">
+      <h3 class="font-black text-gray-700 text-sm">🎵 포 노트 보이싱</h3>
+      <select id="fournote-root" onchange="ReferenceUI.setFourNoteRoot(this.value)"
+        class="ml-auto text-xs border border-gray-200 rounded-lg px-2 py-1.5 focus:outline-none focus:border-amber-300 font-bold">
+        <option>C</option><option>Db</option><option>D</option><option>Eb</option>
+        <option>E</option><option>F</option><option>Gb</option><option>G</option>
+        <option>Ab</option><option>A</option><option>Bb</option><option>B</option>
+      </select>
+    </div>
+
+    <!-- ① 루트 줄 -->
+    <div class="mb-3">
+      <p class="text-[10px] font-black text-gray-400 uppercase tracking-wide mb-1.5">① 루트 줄</p>
+      <div class="flex gap-1 flex-wrap">
+        <button data-fnstr="0" onclick="ReferenceUI.setFourNoteRootStr(0)"
+          class="fn-str-btn text-xs px-3 py-1.5 rounded-lg font-bold bg-amber-500 text-white border border-transparent">6번선</button>
+        <button data-fnstr="1" onclick="ReferenceUI.setFourNoteRootStr(1)"
+          class="fn-str-btn text-xs px-3 py-1.5 rounded-lg font-bold bg-white text-gray-600 border border-gray-200 hover:bg-amber-50">5번선</button>
+        <button data-fnstr="2" onclick="ReferenceUI.setFourNoteRootStr(2)"
+          class="fn-str-btn text-xs px-3 py-1.5 rounded-lg font-bold bg-white text-gray-600 border border-gray-200 hover:bg-amber-50">4번선</button>
+        <button data-fnstr="3" onclick="ReferenceUI.setFourNoteRootStr(3)"
+          class="fn-str-btn text-xs px-3 py-1.5 rounded-lg font-bold bg-white text-gray-600 border border-gray-200 hover:bg-amber-50">3번선</button>
+      </div>
+    </div>
+
+    <!-- ② 코드 타입 -->
+    <div class="mb-4">
+      <p class="text-[10px] font-black text-gray-400 uppercase tracking-wide mb-1.5">② 코드 타입</p>
+      <div class="flex gap-1 flex-wrap">
+        <button data-fntype="major" onclick="ReferenceUI.setFourNoteType('major')"
+          class="fn-type-btn text-xs px-3 py-1.5 rounded-lg font-bold bg-amber-500 text-white border border-transparent">Major</button>
+        <button data-fntype="minor" onclick="ReferenceUI.setFourNoteType('minor')"
+          class="fn-type-btn text-xs px-3 py-1.5 rounded-lg font-bold bg-white text-gray-600 border border-gray-200 hover:bg-amber-50">Minor</button>
+        <button data-fntype="maj7" onclick="ReferenceUI.setFourNoteType('maj7')"
+          class="fn-type-btn text-xs px-3 py-1.5 rounded-lg font-bold bg-white text-gray-600 border border-gray-200 hover:bg-amber-50">Maj7</button>
+        <button data-fntype="dom7" onclick="ReferenceUI.setFourNoteType('dom7')"
+          class="fn-type-btn text-xs px-3 py-1.5 rounded-lg font-bold bg-white text-gray-600 border border-gray-200 hover:bg-amber-50">Dom7</button>
+        <button data-fntype="m7" onclick="ReferenceUI.setFourNoteType('m7')"
+          class="fn-type-btn text-xs px-3 py-1.5 rounded-lg font-bold bg-white text-gray-600 border border-gray-200 hover:bg-amber-50">m7</button>
+        <button data-fntype="m7b5" onclick="ReferenceUI.setFourNoteType('m7b5')"
+          class="fn-type-btn text-xs px-3 py-1.5 rounded-lg font-bold bg-white text-gray-600 border border-gray-200 hover:bg-amber-50">m7♭5</button>
+        <button data-fntype="dim" onclick="ReferenceUI.setFourNoteType('dim')"
+          class="fn-type-btn text-xs px-3 py-1.5 rounded-lg font-bold bg-white text-gray-600 border border-gray-200 hover:bg-amber-50">dim7</button>
+      </div>
+    </div>
+
+    <!-- 지판 -->
+    <p id="fournote-fb-label" class="text-xs font-bold text-gray-500 mb-1 text-center"></p>
+    <div id="fournote-fb" class="rounded-lg overflow-hidden"></div>
+
+    <!-- 범례 -->
+    <div class="flex flex-wrap gap-x-4 gap-y-1 mt-3 text-xs text-gray-500">
+      <span class="font-bold text-gray-600 w-full mb-1">음 역할 색상</span>
+      <span class="flex items-center gap-1"><span class="w-3.5 h-3.5 rounded-full inline-block" style="background:#f5a623"></span>R = 루트</span>
+      <span class="flex items-center gap-1"><span class="w-3 h-3 rounded-full inline-block" style="background:#bae6fd;border:1px solid #0284c7"></span>3 = 3도</span>
+      <span class="flex items-center gap-1"><span class="w-3 h-3 rounded-full inline-block" style="background:#38bdf8"></span>5 = 5도</span>
+      <span class="flex items-center gap-1"><span class="w-3 h-3 rounded-full inline-block" style="background:#3b82f6"></span>7 = 7도</span>
+      <span class="flex items-center gap-1"><span class="w-3 h-3 rounded-full inline-block" style="background:#6366f1"></span>°7 = 감7도</span>
+    </div>
+  </div>
+</div>
 
           <!-- 탭 3: 펜타토닉 스케일 차트 -->
           <div data-panel="penta" class="ref-tab-panel hidden">
