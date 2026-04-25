@@ -1840,9 +1840,27 @@
                     5 (D폼)</button>
                 </div>
               </div>
-
+              <!-- ③ 라벨 & 뷰 모드 -->
+              <div class="flex flex-wrap gap-3 mb-3">
+                <div class="flex items-center gap-1.5">
+                  <span class="text-[10px] font-black text-gray-400 uppercase tracking-wide shrink-0">라벨</span>
+                  <button data-plabel="note" onclick="ReferenceUI.setPentaLabel('note')"
+                    class="penta-label-btn text-xs px-3 py-1.5 rounded-lg font-bold border bg-amber-500 text-white border-transparent">음이름</button>
+                  <button data-plabel="interval" onclick="ReferenceUI.setPentaLabel('interval')"
+                    class="penta-label-btn text-xs px-3 py-1.5 rounded-lg font-bold border bg-white text-gray-600 border-gray-200 hover:bg-amber-50">음도</button>
+                </div>
+                <div class="flex items-center gap-1.5 ml-auto">
+                  <span class="text-[10px] font-black text-gray-400 uppercase tracking-wide shrink-0">뷰</span>
+                  <button data-pview="full" onclick="ReferenceUI.setPentaView('full')"
+                    class="penta-view-btn text-xs px-3 py-1.5 rounded-lg font-bold border bg-amber-500 text-white border-transparent">전체 지판</button>
+                  <button data-pview="boxes" onclick="ReferenceUI.setPentaView('boxes')"
+                    class="penta-view-btn text-xs px-3 py-1.5 rounded-lg font-bold border bg-white text-gray-600 border-gray-200 hover:bg-amber-50">5박스</button>
+                </div>
+              </div>
               <!-- ③ 단일 지판 (0-17프렛) -->
               <div id="penta-full" class="rounded-lg overflow-hidden mb-3"></div>
+                            <!-- 5박스 분리 뷰 -->
+              <div id="penta-boxes-grid" class="hidden grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3"></div>
 
               <!-- ④ 범례 (동적 — JS가 Key에 맞는 실제 프렛 범위로 업데이트) -->
               <div id="penta-legend-dynamic" class="flex flex-wrap gap-x-4 gap-y-1 text-xs text-gray-500"></div>
