@@ -500,15 +500,17 @@ function addWater() {
   }
 
 
-  function renderWeeklyChallenges() {
+   function renderWeeklyChallenges() {
     const el = document.getElementById('weekly-challenges');
     if (!el) return;
     const wk = getWeekKey();
-    if (localStorage.getItem('rf_chal_week') !== wk) {
-      localStorage.setItem('rf_chal_week', wk);
-      // rf_chal_prog 리셋은 ChallengeTracker._getProg()가 rf_chal_week_app 기준으로 처리함
-      // 여기서 삭제하면 addRepSong 등이 방금 저장한 진행이 날아감
+    // 주간 변경 감지: ChallengeTracker와 동일한 rf_chal_week_app 키 기준으로 진행도 리셋
+    if (localStorage.getItem('rf_chal_week_app') !== wk) {
+      localStorage.setItem('rf_chal_week_app', wk);
+      localStorage.setItem('rf_chal_prog', '{}');
+      localStorage.removeItem('rf_chal_reward_init_' + wk);
     }
+    localStorage.setItem('rf_chal_week', wk);
     let prog = {};
     try { prog = JSON.parse(localStorage.getItem('rf_chal_prog')) || {}; } catch { }
     const seed = parseInt(wk.replace(/\D/g, ''));
