@@ -2331,6 +2331,8 @@ const ReferenceUI = (() => {
   let _triadLabelMode = 'interval'; // 'interval' | 'note'
   let _pentaPos = 0;         // 0=All, 1~5
   let _pentaKey = 'major';   // 'major'|'minor'
+    let _pentaView  = 'full';    // 'full' | 'boxes'
+  let _pentaLabel = 'note';    // 'note' | 'interval'
   let _chordToneRoot = 'A';
   let _chordToneType = 'major';
   let _chordToneLabelMode = 'interval'; // 'interval' | 'note'
@@ -2859,47 +2861,99 @@ function _getPentaPositions(rootNote, mode) {
     const rootNote = document.getElementById('penta-key-root')?.value || 'A';
     const positions = _getPentaPositions(rootNote, mode);
 
-    // "rfSIdx-fret" → Set<posNum>  (겹침 허용)
-    const dotPosSet = new Map();
-    positions.forEach(posData => {
-      posData.notes.forEach(({ si, fret }) => {
-        const k = `${5 - si}-${fret}`;
-        if (!dotPosSet.has(k)) dotPosSet.set(k, new Set());
-        dotPosSet.get(k).add(posData.pos);
-      });
-    });
+    const PENTA_INTERVALS = {
+      minor: { 0:'R', 3:'♭3', 5:'4', 7:'5', 10:'♭7' },
+      major: { 0:'R', 2:'2',  4:'3', 7:'5', 9:'6'   },
+    };
+    const intervalMap = PENTA_INTERVALS[mode] || PENTA_INTERVALS.minor;
+    const ri = CONFIG.NOTES.indexOf(rootNote);
+
+    function getLabelForNote(note) {
+      if (_pentaLabel === 'interval') {
+        const semi = (CONFIG.NOTES.indexOf(note) - ri + 12) % 12;
+        return intervalMap[semi] ?? note;
+      }
+      return note;
+    }
+
+    const fullDiv  = document.getElementById('penta-full');
+    const boxesDiv = document.getElementById('penta-boxes-grid');
+    if (!fullDiv || !boxesDiv) return;
 
     const scaleName = mode === 'major' ? 'Major Pentatonic' : 'Minor Pentatonic';
 
-    const noteColorFn = (fret, sIdx, note, _role) => {
-      const k = `${sIdx}-${fret}`;
-      const set = dotPosSet.get(k);
-      if (!set || set.size === 0) {
-        return { fill: '#d1d5db', stroke: '#9ca3af', textFill: '#9ca3af', dotR: 8, label: note, opacity: 0.15 };
-      }
+    if (_pentaView === 'full') {
+      fullDiv.classList.remove('hidden');
+      boxesDiv.classList.add('hidden');
 
-      // 선택 포지션 모드: 해당 포지션 소유 여부로 활성/비활성 판별
-      const isActive = _pentaPos === 0 || set.has(_pentaPos);
+      const dotPosSet = new Map();
+      positions.forEach(posData => {
+        posData.notes.forEach(({ si, fret }) => {
+          const k = `${5 - si}-${fret}`;
+          if (!dotPosSet.has(k)) dotPosSet.set(k, new Set());
+          dotPosSet.get(k).add(posData.pos);
+        });
+      });
 
-      // 색상: 선택 포지션이면 그 포지션 색, All이면 가장 낮은 포지션 번호 색
-      const displayPos = (_pentaPos !== 0 && set.has(_pentaPos))
-        ? _pentaPos
-        : Math.min(...set);
-      const c = _PENTA_POS_COLORS[displayPos];
-      const isRoot = note === rootNote;
-      return {
-        fill: c.fill, stroke: c.stroke, textFill: c.textFill,
-        dotR: isRoot ? 11 : 9,
-        label: note,
-        opacity: isActive ? 1 : 0.15,
+      const noteColorFn = (fret, sIdx, note, _role) => {
+        const k = `${sIdx}-${fret}`;
+        const set = dotPosSet.get(k);
+        if (!set || set.size === 0) {
+          return { fill: '#d1d5db', stroke: '#9ca3af', textFill: '#9ca3af', dotR: 8, label: getLabelForNote(note), opacity: 0.15 };
+        }
+        const isActive = _pentaPos === 0 || set.has(_pentaPos);
+        const displayPos = (_pentaPos !== 0 && set.has(_pentaPos)) ? _pentaPos : Math.min(...set);
+        const c = _PENTA_POS_COLORS[displayPos];
+        const isRoot = note === rootNote;
+        return {
+          fill: c.fill, stroke: c.stroke, textFill: c.textFill,
+          dotR: isRoot ? 11 : 9,
+          label: getLabelForNote(note),
+          opacity: isActive ? 1 : 0.15,
+        };
       };
-    };
 
-    Fretboard.render('penta-full', {
-      rootNote, scaleName,
-      startFret: 0, endFret: 17,
-      noteColorFn,
-    });
+      Fretboard.render('penta-full', { rootNote, scaleName, startFret: 0, endFret: 17, noteColorFn });
+
+    } else {
+      // 5박스 분리 뷰
+      fullDiv.classList.add('hidden');
+      boxesDiv.classList.remove('hidden');
+
+      const names = CAGED_NAMES[mode] || [];
+      const filtered = positions.filter(b => _pentaPos === 0 || b.pos === _pentaPos);
+
+      boxesDiv.innerHTML = filtered.map(b => {
+        const color = _PENTA_POS_COLORS[b.pos];
+        return `
+          <div class="penta-fretboard-cell border rounded-xl p-3" style="border-color:${color.fill}55">
+            <div class="flex items-center justify-between mb-2">
+              <span class="text-xs font-black" style="color:${color.fill}">${names[b.pos - 1] || 'Pos ' + b.pos}</span>
+              <span class="text-[10px] text-gray-400">${b.start}~${b.end} fr</span>
+            </div>
+            <div id="penta-box-${b.pos}"></div>
+          </div>`;
+      }).join('');
+
+      filtered.forEach(b => {
+        const c = _PENTA_POS_COLORS[b.pos];
+        const noteColorFn = (fret, sIdx, note) => {
+          const isRoot = note === rootNote;
+          return {
+            fill: c.fill, stroke: c.stroke, textFill: c.textFill,
+            dotR: isRoot ? 11 : 9,
+            label: getLabelForNote(note),
+            opacity: 1,
+          };
+        };
+        Fretboard.render(`penta-box-${b.pos}`, {
+          rootNote, scaleName,
+          startFret: Math.max(0, b.start - 1),
+          endFret: b.end + 1,
+          noteColorFn,
+        });
+      });
+    }
 
     _updatePentaLegend(positions);
   }
@@ -3158,7 +3212,33 @@ const VCOLS = { all: 'bg-gray-700', root: 'bg-amber-500', '1st': 'bg-indigo-500'
     });
     renderPentaPositions();
   }
+  function setPentaView(view) {
+    _pentaView = view;
+    document.querySelectorAll('.penta-view-btn').forEach(btn => {
+      const on = btn.dataset.pview === view;
+      btn.classList.toggle('bg-amber-500', on);
+      btn.classList.toggle('text-white', on);
+      btn.classList.toggle('border-transparent', on);
+      btn.classList.toggle('bg-white', !on);
+      btn.classList.toggle('text-gray-600', !on);
+      btn.classList.toggle('border-gray-200', !on);
+    });
+    renderPentaPositions();
+  }
 
+  function setPentaLabel(label) {
+    _pentaLabel = label;
+    document.querySelectorAll('.penta-label-btn').forEach(btn => {
+      const on = btn.dataset.plabel === label;
+      btn.classList.toggle('bg-amber-500', on);
+      btn.classList.toggle('text-white', on);
+      btn.classList.toggle('border-transparent', on);
+      btn.classList.toggle('bg-white', !on);
+      btn.classList.toggle('text-gray-600', !on);
+      btn.classList.toggle('border-gray-200', !on);
+    });
+    renderPentaPositions();
+  }
   function _initChordToneRootSelect() {
     const sel = document.getElementById('chord-tone-ref-root');
     if (!sel || sel.children.length > 0) return;
@@ -3210,7 +3290,7 @@ const VCOLS = { all: 'bg-gray-700', root: 'bg-amber-500', '1st': 'bg-indigo-500'
     onEnter, switchTab,
     renderPentaPositions, renderTriadDiagram, renderChordToneRef,
     setTriadRoot, setTriadType, setTriadVoicing, setTriadStringGroup, setTriadLabelMode,
-    setPentaPos, setPentaKey,
+    setPentaPos, setPentaKey, setPentaView, setPentaLabel,
     setCagedPos, setLabelMode, onScaleChange,
     setChordToneRoot, setChordToneType, setChordToneLabelMode,
   };
