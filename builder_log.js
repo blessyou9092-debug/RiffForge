@@ -242,16 +242,41 @@ function markSessionComplete(id) {
   }
 // ── 과거 루틴 불러오기 ───────────────────────────────────────────────
 function loadRoutineFrom(type) {
-  const d = new Date();
-  if (type === 'yesterday') d.setDate(d.getDate() - 1);
-  else if (type === 'lastweek') d.setDate(d.getDate() - 7);
-  const targetDate = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
-  const log = Storage.getLog(targetDate);
-  if (!log || !log.sessions?.length) {
-    showToast(`${type === 'yesterday' ? '어제' : '지난주 같은 요일'} 기록이 없어요`, 'warning');
-    return;
+  const _fmt = (dt) => `${dt.getFullYear()}-${String(dt.getMonth()+1).padStart(2,'0')}-${String(dt.getDate()).padStart(2,'0')}`;
+
+  let targetDate, log, label;
+
+  if (type === 'recent') {
+    // 편집 중인 날짜 기준 과거 60일 중 세션이 있는 가장 최근 로그를 탐색
+    const base = (editingDate && /^\d{4}-\d{2}-\d{2}$/.test(editingDate))
+      ? new Date(editingDate + 'T00:00:00')
+      : new Date();
+    for (let i = 1; i <= 60; i++) {
+      const dt = new Date(base);
+      dt.setDate(base.getDate() - i);
+      const ds = _fmt(dt);
+      const l = Storage.getLog(ds);
+      if (l && l.sessions?.length) {
+        targetDate = ds; log = l;
+        const diff = i === 1 ? '하루 전' : `${i}일 전`;
+        label = `최근 루틴(${diff})`;
+        break;
+      }
+    }
+    if (!log) { showToast('최근 60일 내 연습 기록이 없어요', 'warning'); return; }
+  } else {
+    const d = new Date();
+    if (type === 'yesterday') d.setDate(d.getDate() - 1);
+    else if (type === 'lastweek') d.setDate(d.getDate() - 7);
+    targetDate = _fmt(d);
+    log = Storage.getLog(targetDate);
+    if (!log || !log.sessions?.length) {
+      showToast(`${type === 'yesterday' ? '어제' : '지난주 같은 요일'} 기록이 없어요`, 'warning');
+      return;
+    }
+    label = type === 'yesterday' ? '어제' : '지난주 같은 요일';
   }
-  const label = type === 'yesterday' ? '어제' : '지난주 같은 요일';
+
   const doLoad = () => {
     sessions = log.sessions.map(s => ({
       ...s,
