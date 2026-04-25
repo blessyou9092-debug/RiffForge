@@ -95,13 +95,17 @@ const AppState = (() => {
         // 이전 시즌 보상 처리
         if (prevSeasonKey) await _handleSeasonReset(prevSeasonKey);
 
-        const profile = await FireDB.loadProfile();
+                const profile = await FireDB.loadProfile();
         if (profile) {
           if ((profile.xp || 0) > xp) { xp = profile.xp; Storage.set(CONFIG.KEYS.XP, xp); }
           if ((profile.water || 0) > water) { water = profile.water; Storage.set(CONFIG.KEYS.WATER, water); }
           if (profile.totalMin > totalMin) { totalMin = profile.totalMin; Storage.set(CONFIG.KEYS.TOTAL_MIN, totalMin); }
           if (profile.weeklyMin) { weeklyMin = profile.weeklyMin; Storage.set(CONFIG.KEYS.WEEKLY_MIN, weeklyMin); }
           if (profile.lastPracticeDate) { lastPracticeDate = profile.lastPracticeDate; Storage.set(CONFIG.KEYS.LAST_PRACTICE_DATE, lastPracticeDate); }
+          // 아바타 동기화 (다른 기기에서 변경 시 반영)
+          if (profile.avatar && profile.avatar !== Storage.get(CONFIG.KEYS.AVATAR, '🎸')) {
+            Storage.set(CONFIG.KEYS.AVATAR, profile.avatar);
+          }
           // seasonXp: 같은 시즌이고 클라우드 값이 더 크면 덮어씀
           if (profile.seasonKey === seasonKey) {
             if ((profile.seasonXp || 0) > seasonXp) { seasonXp = profile.seasonXp; Storage.set('rf_season_xp', seasonXp); }
@@ -791,15 +795,34 @@ function addWater() {
     const name = (document.getElementById('profile-name-input')?.value || '').trim();
     const selBtn = document.querySelector('.avatar-opt[data-selected="true"]');
     const avatar = selBtn ? selBtn.dataset.avatar : Storage.get(CONFIG.KEYS.AVATAR, '🎸');
+    const oldAvatar = Storage.get(CONFIG.KEYS.AVATAR, '🎸');
+    const oldName = Storage.get(CONFIG.KEYS.USERNAME, '');
+    const finalName = name || oldName;
+    const changed = avatar !== oldAvatar || (name && name !== oldName);
 
-    if (name) Storage.set(CONFIG.KEYS.USERNAME
-      , name);
+    if (name) Storage.set(CONFIG.KEYS.USERNAME, name);
     Storage.set(CONFIG.KEYS.AVATAR, avatar);
 
     closeProfileModal();
     renderGreeting();
     CrewBoard.refreshMyInfo(); // 피드 헤더 동기화
     showToast('프로필이 저장되었습니다 ✅', 'success');
+
+    // ── 다른 유저에게도 즉시 반영되도록 Firestore 동기화 ───────────
+    if (changed && typeof FireDB !== 'undefined' && FireDB.isReady() && FireDB.getUsername()) {
+      // 1) profile 문서에 avatar/username 저장 (다른 기기/모듈 참조용)
+      FireDB.saveProfile({
+        avatar,
+        username: finalName,
+        updatedAt: new Date().toISOString(),
+      }).catch(e => console.warn('[saveProfile] avatar 동기화 실패:', e));
+
+      // 2) 시즌 랭킹의 avatar 즉시 갱신 (다른 유저의 랭킹 카드/모달에 반영)
+      updateRanking().catch(() => {});
+
+      // 3) 크루 게시판: 내가 작성한 게시글/댓글의 authorAvatar 일괄 갱신
+      CrewBoard.updateMyAuthorInfo?.(avatar, finalName);
+    }
   }
   function navigate(page) { AppSidebar.setActive(page); }
 
@@ -3769,6 +3792,48 @@ function previewPractice() {
   }
 
 
+   // ── 내 프로필(아바타/닉네임) 변경 시 게시판 일괄 갱신 ─────────────────────
+  async function updateMyAuthorInfo(newAvatar, newName) {
+    if (typeof FireDB === 'undefined' || !FireDB.isReady() || !FireDB.getUsername()) return;
+    const myId = AppState.getUserId();
+    const myName = newName || Storage.get(CONFIG.KEYS.USERNAME, '');
+    const matches = (a) =>
+      a && (a.authorId === myId || (myName && a.authorName === myName));
+
+    let posts = [];
+    try { posts = await FireDB.fetchPosts(); } catch { return; }
+
+    const writes = [];
+    posts.forEach(p => {
+      let touched = false;
+      if (matches(p)) {
+        if (p.authorAvatar !== newAvatar) { p.authorAvatar = newAvatar; touched = true; }
+        if (p.authorName !== myName) { p.authorName = myName; touched = true; }
+      }
+      if (Array.isArray(p.comments)) {
+        p.comments.forEach(c => {
+          if (matches(c)) {
+            if (c.authorAvatar !== newAvatar) { c.authorAvatar = newAvatar; touched = true; }
+            if (c.authorName !== myName) { c.authorName = myName; touched = true; }
+          }
+        });
+      }
+      if (touched) {
+        writes.push(FireDB.updatePost(p.id, {
+          authorAvatar: p.authorAvatar,
+          authorName: p.authorName,
+          comments: p.comments || [],
+        }));
+      }
+    });
+
+    if (writes.length) {
+      await Promise.all(writes).catch(() => {});
+      _setLocal(posts);
+      render(posts);
+    }
+  }
+
   // ── 30초마다 자동 폴링 ───────────────────────────────────────────────────
   function startPolling() {
     // Firestore 실시간 구독으로 대체 — 폴링 불필요
@@ -3780,6 +3845,7 @@ function previewPractice() {
     setSortMode, deletePost, startEdit, saveEdit, cancelEdit,
     deleteComment, startEditComment, saveEditComment, cancelEditComment,
     previewPractice,
+    updateMyAuthorInfo,
   };
 })();  
 // ═══════════════════════════════════════════════════════════════════════════
