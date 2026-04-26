@@ -3777,7 +3777,7 @@ function previewPractice() {
     const btn = document.getElementById('board-load-more-btn');
     if (btn) { btn.textContent = '불러오는 중...'; btn.disabled = true; }
 
-    const result = await FireDB.fetchPostsPage(_lastDoc, 10);
+    const result = await FireDB.fetchPostsPage(_lastDoc, 4);
 
     // 중복 제거
     const existingIds = new Set([..._topPosts, ..._olderPosts].map(p => p.id));
