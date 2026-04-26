@@ -200,13 +200,13 @@ const FireDB = (() => {
   }
   async function fetchPostsPage(lastDoc, limitNum) {
     try {
-      let q = _boardCol().orderBy('createdAt', 'desc').limit(limitNum || 10);
+      let q = _boardCol().orderBy('createdAt', 'desc').limit(limitNum || 4);
       if (lastDoc) q = q.startAfter(lastDoc);
       const snap = await q.get();
       return {
         posts: snap.docs.map(d => ({ id: d.id, ...d.data() })),
         lastDoc: snap.docs.length ? snap.docs[snap.docs.length - 1] : null,
-        hasMore: snap.docs.length === (limitNum || 10),
+        hasMore: snap.docs.length === (limitNum || 4),
       };
     } catch (e) {
       console.warn('[FireDB] fetchPostsPage 실패:', e);
