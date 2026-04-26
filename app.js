@@ -2825,41 +2825,40 @@ const PENTA_POS_OFFSETS = {
    */
 function _getPentaPositions(rootNote, mode) {
   const rootSemi = KEY_SEMITONES[rootNote] || 0;
-  // 6번줄(E, open=4semitone) 위 루트 프렛
   const r6E = (rootSemi - 4 + 12) % 12;
 
-  // 배열 인덱스 = v9 si (0=1번줄e, 1=2번줄B, 2=3번줄G, 3=4번줄D, 4=5번줄A, 5=6번줄E)
-  // 각 항목: [낮은프렛 오프셋, 높은프렛 오프셋]  — 6번줄 루트 프렛 기준
   const SHAPES = {
     minor: [
-      [[0,3],[0,3],[0,2],[0,2],[0,2],[0,3]],          // Pos 1
-      [[3,5],[3,5],[2,4],[2,5],[2,5],[3,5]],          // Pos 2
-      [[5,7],[5,8],[4,7],[5,7],[5,7],[5,7]],          // Pos 3
-      [[7,10],[8,10],[7,9],[7,9],[7,10],[7,10]],      // Pos 4
-      [[10,12],[10,12],[9,12],[9,12],[10,12],[10,12]], // Pos 5
+      [[0,3],[0,3],[0,2],[0,2],[0,2],[0,3]],
+      [[3,5],[3,5],[2,4],[2,5],[2,5],[3,5]],
+      [[5,7],[5,8],[4,7],[5,7],[5,7],[5,7]],
+      [[7,10],[8,10],[7,9],[7,9],[7,10],[7,10]],
+      [[10,12],[10,12],[9,12],[9,12],[10,12],[10,12]],
     ],
     major: [
-      [[0,2],[0,2],[-1,1],[-1,2],[-1,2],[0,2]],      // Pos 1
-      [[2,4],[2,5],[1,4],[2,4],[2,4],[2,4]],          // Pos 2
-      [[4,7],[5,7],[4,6],[4,6],[4,7],[4,7]],          // Pos 3
-      [[7,9],[7,9],[6,9],[6,9],[7,9],[7,9]],          // Pos 4
-      [[9,12],[9,12],[9,11],[9,11],[9,11],[9,12]],    // Pos 5
+      [[0,2],[0,2],[-1,1],[-1,2],[-1,2],[0,2]],
+      [[2,4],[2,5],[1,4],[2,4],[2,4],[2,4]],
+      [[4,7],[5,7],[4,6],[4,6],[4,7],[4,7]],
+      [[7,9],[7,9],[6,9],[6,9],[7,9],[7,9]],
+      [[9,12],[9,12],[9,11],[9,11],[9,11],[9,12]],
     ],
   };
 
   const shapes = SHAPES[mode] || SHAPES.minor;
 
   return shapes.map((stringOffsets, pi) => {
-    const allNotes = [];
+    const rawNotes = [];
     for (let si = 0; si < 6; si++) {
       const [offLo, offHi] = stringOffsets[si];
-      [offLo, offHi].forEach(off => {
-        let fret = r6E + off;
-        while (fret < 0)  fret += 12;
-        while (fret > 17) fret -= 12;
-        allNotes.push({ si, fret, interval: off });
-      });
+      [offLo, offHi].forEach(off => rawNotes.push({ si, fret: r6E + off, interval: off }));
     }
+
+    // 포지션 전체를 옥타브 이동 (음 개별 wrap 대신)
+    const rawMax = Math.max(...rawNotes.map(n => n.fret));
+    const rawMin = Math.min(...rawNotes.map(n => n.fret));
+    const shift = rawMax > 17 ? -12 : rawMin < 0 ? 12 : 0;
+
+    const allNotes = rawNotes.map(({ si, fret, interval }) => ({ si, fret: fret + shift, interval }));
     const frets = allNotes.map(n => n.fret);
     return {
       pos: pi + 1,
