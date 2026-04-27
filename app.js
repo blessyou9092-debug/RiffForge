@@ -2883,99 +2883,89 @@ function _getPentaPositions(rootNote, mode) {
     const rootNote = document.getElementById('penta-key-root')?.value || 'A';
     const positions = _getPentaPositions(rootNote, mode);
 
-    const PENTA_INTERVALS = {
-      minor: { 0:'R', 3:'♭3', 5:'4', 7:'5', 10:'♭7' },
-      major: { 0:'R', 2:'2',  4:'3', 7:'5', 9:'6'   },
-    };
-    const intervalMap = PENTA_INTERVALS[mode] || PENTA_INTERVALS.minor;
-    const ri = CONFIG.NOTES.indexOf(rootNote);
-
-    function getLabelForNote(note) {
-      if (_pentaLabel === 'interval') {
-        const semi = (CONFIG.NOTES.indexOf(note) - ri + 12) % 12;
-        return intervalMap[semi] ?? note;
-      }
-      return note;
-    }
-
-    const fullDiv  = document.getElementById('penta-full');
-    const boxesDiv = document.getElementById('penta-boxes-grid');
-    if (!fullDiv || !boxesDiv) return;
+    const dotPosSet = new Map();
+    positions.forEach(posData => {
+      posData.notes.forEach(({ si, fret }) => {
+        const k = `${5 - si}-${fret}`;
+        if (!dotPosSet.has(k)) dotPosSet.set(k, new Set());
+        dotPosSet.get(k).add(posData.pos);
+      });
+    });
 
     const scaleName = mode === 'major' ? 'Major Pentatonic' : 'Minor Pentatonic';
 
-    if (_pentaView === 'full') {
-      fullDiv.classList.remove('hidden');
-      boxesDiv.classList.add('hidden');
+    // 인접 포지션 쌍 (5→1 wrap 포함)
+    const ADJ = new Set(['1-2', '2-3', '3-4', '4-5', '5-1']);
 
-      const dotPosSet = new Map();
-      positions.forEach(posData => {
-        posData.notes.forEach(({ si, fret }) => {
-          const k = `${5 - si}-${fret}`;
-          if (!dotPosSet.has(k)) dotPosSet.set(k, new Set());
-          dotPosSet.get(k).add(posData.pos);
-        });
-      });
+    function _pairKey(set) {
+      const [a, b] = [...set].sort((x, y) => x - y);
+      return (a === 1 && b === 5) ? '5-1' : `${a}-${b}`;
+    }
 
-      const noteColorFn = (fret, sIdx, note, _role) => {
-        const k = `${sIdx}-${fret}`;
-        const set = dotPosSet.get(k);
-        if (!set || set.size === 0) {
-          return { fill: '#d1d5db', stroke: '#9ca3af', textFill: '#9ca3af', dotR: 8, label: getLabelForNote(note), opacity: 0.15 };
-        }
-        const isActive = _pentaPos === 0 || set.has(_pentaPos);
-        const displayPos = (_pentaPos !== 0 && set.has(_pentaPos)) ? _pentaPos : Math.min(...set);
-        const c = _PENTA_POS_COLORS[displayPos];
-        const isRoot = note === rootNote;
-        return {
-          fill: c.fill, stroke: c.stroke, textFill: c.textFill,
-          dotR: isRoot ? 11 : 9,
-          label: getLabelForNote(note),
-          opacity: isActive ? 1 : 0.15,
-        };
+    // 실제 등장하는 인접 쌍만 수집해서 gradientDefs 생성
+    const usedGrads = new Set();
+    dotPosSet.forEach(set => {
+      if (set.size === 2) {
+        const pk = _pairKey(set);
+        if (ADJ.has(pk)) usedGrads.add(pk);
+      }
+    });
+
+    const gradientDefs = [...usedGrads].map(pk => {
+      const [p1, p2] = pk === '5-1' ? [5, 1] : pk.split('-').map(Number);
+      const c1 = _PENTA_POS_COLORS[p1];
+      const c2 = _PENTA_POS_COLORS[p2];
+      return {
+        id: `pg-${pk}`,
+        x1: '0%', y1: '0%', x2: '100%', y2: '0%',
+        stops: [
+          { offset: '0%',   color: c1.fill },
+          { offset: '100%', color: c2.fill },
+        ],
       };
+    });
 
-      Fretboard.render('penta-full', { rootNote, scaleName, startFret: 0, endFret: 17, noteColorFn });
+    const noteColorFn = (fret, sIdx, note, _role) => {
+      const k = `${sIdx}-${fret}`;
+      const set = dotPosSet.get(k);
+      if (!set || set.size === 0) {
+        return { fill: '#d1d5db', stroke: '#9ca3af', textFill: '#9ca3af', dotR: 8, label: note, opacity: 0.15 };
+      }
+      const isActive = _pentaPos === 0 || set.has(_pentaPos);
+      const isRoot = note === rootNote;
 
-    } else {
-      // 5박스 분리 뷰
-      fullDiv.classList.add('hidden');
-      boxesDiv.classList.remove('hidden');
-
-      const names = CAGED_NAMES[mode] || [];
-      const filtered = positions.filter(b => _pentaPos === 0 || b.pos === _pentaPos);
-
-      boxesDiv.innerHTML = filtered.map(b => {
-        const color = _PENTA_POS_COLORS[b.pos];
-        return `
-          <div class="penta-fretboard-cell border rounded-xl p-3" style="border-color:${color.fill}55">
-            <div class="flex items-center justify-between mb-2">
-              <span class="text-xs font-black" style="color:${color.fill}">${names[b.pos - 1] || 'Pos ' + b.pos}</span>
-              <span class="text-[10px] text-gray-400">${b.start}~${b.end} fr</span>
-            </div>
-            <div id="penta-box-${b.pos}"></div>
-          </div>`;
-      }).join('');
-
-      filtered.forEach(b => {
-        const c = _PENTA_POS_COLORS[b.pos];
-        const noteColorFn = (fret, sIdx, note) => {
-          const isRoot = note === rootNote;
+      // All 뷰 + 인접 2포지션 공유 → 그라데이션
+      if (_pentaPos === 0 && set.size === 2) {
+        const pk = _pairKey(set);
+        if (ADJ.has(pk)) {
+          const p1 = pk === '5-1' ? 5 : Number(pk[0]);
+          const c1 = _PENTA_POS_COLORS[p1];
           return {
-            fill: c.fill, stroke: c.stroke, textFill: c.textFill,
+            fill: `url(#pg-${pk})`,
+            stroke: c1.stroke,
+            textFill: '#fff',
             dotR: isRoot ? 11 : 9,
-            label: getLabelForNote(note),
+            label: note,
             opacity: 1,
           };
-        };
-        Fretboard.render(`penta-box-${b.pos}`, {
-          rootNote, scaleName,
-          startFret: Math.max(0, b.start - 1),
-          endFret: b.end + 1,
-          noteColorFn,
-        });
-      });
-    }
+        }
+      }
+
+      const displayPos = (_pentaPos !== 0 && set.has(_pentaPos)) ? _pentaPos : Math.min(...set);
+      const c = _PENTA_POS_COLORS[displayPos];
+      return {
+        fill: c.fill, stroke: c.stroke, textFill: c.textFill,
+        dotR: isRoot ? 11 : 9,
+        label: note,
+        opacity: isActive ? 1 : 0.15,
+      };
+    };
+
+    Fretboard.render('penta-full', {
+      rootNote, scaleName,
+      startFret: 0, endFret: 17,
+      noteColorFn, gradientDefs,
+    });
 
     _updatePentaLegend(positions);
   }
