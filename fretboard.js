@@ -61,6 +61,7 @@ const Fretboard = (() => {
       chordRoot    = null,      // 백킹 재생 중 코드 루트 강조
       labelMode    = 'note',    // 'note' | 'interval' | 'none'
       activeStrings = null,     // Set<number> — 활성 현 인덱스 (0=6번줄, 5=1번줄); null이면 전체
+      gradientDefs = [],
     } = options;
 
     const container = document.getElementById(containerId);
@@ -79,6 +80,19 @@ const Fretboard = (() => {
       width: '100%',
       style: 'display:block; background:#fef9f0; border-radius:8px;',
     });
+        if (gradientDefs.length > 0) {
+      const defs = el('defs', {});
+      gradientDefs.forEach(({ id, x1='0%', y1='0%', x2='100%', y2='0%', stops }) => {
+        const lg = el('linearGradient', { id, x1, y1, x2, y2 });
+        stops.forEach(({ offset, color }) => {
+          const s = el('stop', { offset });
+          s.setAttribute('stop-color', color);
+          lg.appendChild(s);
+        });
+        defs.appendChild(lg);
+      });
+      svg.appendChild(defs);
+    }
 
     // ── 인레이 ────────────────────────────────────────────────────
     for (const f of INLAY_FRETS) {
