@@ -2880,7 +2880,8 @@ function _getPentaPositions(rootNote, mode) {
    */
   function renderPentaPositions() {
     const mode = _pentaKey;
-    const rootNote = document.getElementById('penta-key-root')?.value || 'A';
+    const _rawKey = document.getElementById('penta-key-root')?.value || 'A';
+    const rootNote = {'C#':'Db','D#':'Eb','F#':'Gb','G#':'Ab','A#':'Bb'}[_rawKey] || _rawKey;
     const positions = _getPentaPositions(rootNote, mode);
 
     const dotPosSet = new Map();
