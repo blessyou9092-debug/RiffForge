@@ -991,9 +991,9 @@ const AppSidebar = (() => {
     { id: 'pomo', label: '포모도로', icon: 'fa-clock' },
     { id: 'studio', label: '메트로놈 & 백킹', icon: 'fa-music' },
     { id: 'tree', label: '기타 나무', icon: 'fa-seedling' },
-    { id: 'reference', label: '참고 자료🚧(미완)', icon: 'fa-book-open' },
+    { id: 'reference', label: '참고 자료', icon: 'fa-book-open' },
     { id: 'repertoire', label: '연습곡 관리', icon: 'fa-guitar' },
-    { id: 'ranking', label: '크루 랭킹🚧(미완)', icon: 'fa-ranking-star' },
+    { id: 'ranking', label: '크루 랭킹', icon: 'fa-ranking-star' },
     { id: 'board', label: '크루 게시판', icon: 'fa-comments' },
     { id: 'export', label: '성장 스토리', icon: 'fa-regular fa-heart' },
   ];
