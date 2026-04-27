@@ -2853,22 +2853,37 @@ function _getPentaPositions(rootNote, mode) {
       [offLo, offHi].forEach(off => rawNotes.push({ si, fret: r6E + off, interval: off }));
     }
 
-    // 포지션 전체를 옥타브 이동 (음 개별 wrap 대신)
+    // 포지션 전체를 옥타브 이동
     const rawMax = Math.max(...rawNotes.map(n => n.fret));
     const rawMin = Math.min(...rawNotes.map(n => n.fret));
     const shift = rawMax > 17 ? -12 : rawMin < 0 ? 12 : 0;
+    const mainNotes = rawNotes.map(({ si, fret, interval }) => ({ si, fret: fret + shift, interval }));
 
-    const allNotes = rawNotes.map(({ si, fret, interval }) => ({ si, fret: fret + shift, interval }));
-    const frets = allNotes.map(n => n.fret);
+    // 옥타브 확장: ≥12 프렛은 -12 버전도, ≤4 프렛은 +12 버전도 추가
+    const seen = new Set();
+    const allNotes = [];
+    function addNote(si, fret, interval) {
+      if (fret < 0 || fret > 17) return;
+      const k = `${si}-${fret}`;
+      if (seen.has(k)) return;
+      seen.add(k);
+      allNotes.push({ si, fret, interval });
+    }
+    mainNotes.forEach(({ si, fret, interval }) => {
+      addNote(si, fret, interval);
+      if (fret >= 12) addNote(si, fret - 12, interval);
+      if (fret <= 4)  addNote(si, fret + 12, interval);
+    });
+
+    const mainFrets = mainNotes.map(n => n.fret);
     return {
       pos: pi + 1,
-      start: Math.min(...frets),
-      end: Math.max(...frets),
+      start: Math.min(...mainFrets),  // 범례 표시용 (원래 범위 유지)
+      end: Math.max(...mainFrets),
       notes: allNotes,
     };
   });
 }
-
 
 
   /**
