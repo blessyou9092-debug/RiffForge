@@ -271,27 +271,128 @@ function addWater() {
   }
 async function _handleSeasonReset(prevSeasonKey) {
   if (typeof FireDB === 'undefined' || !FireDB.isReady()) return;
-  // 중복 처리 방지 (B4: 멱등성)
-  const rewardedKey = 'rf_season_rewarded_' + prevSeasonKey;
-  if (localStorage.getItem(rewardedKey)) return;
+  const myName = Storage.get(CONFIG.KEYS.USERNAME, '');
+  if (!myName) return;
   try {
-    const myName = Storage.get(CONFIG.KEYS.USERNAME, '');
-    if (!myName) return;
     const all = await FireDB.loadSeasonRankings(prevSeasonKey);
-    const ranked = all.filter(r => r.firstLogDate).sort((a, b) => (b.seasonXp || 0) - (a.seasonXp || 0));
-    const myIdx = ranked.findIndex(r => r.username === myName);
-    if (myIdx < 0) return;
-    const myRank = myIdx + 1;
-    const badge = CONFIG.SEASON_BADGES.find(b => b.rank === myRank) || CONFIG.SEASON_BADGES.find(b => b.rank === 99);
-    if (!badge) return;
-    const earned = Storage.get('rf_season_badges', []);
-    earned.push({ badgeId: badge.id, season: prevSeasonKey, rank: myRank, earnedAt: new Date().toISOString() });
-    Storage.set('rf_season_badges', earned);
-    localStorage.setItem(rewardedKey, '1'); // 처리 완료 플래그
-    setTimeout(() => showToast(`🎉 시즌 종료! ${myRank}위 → ${badge.emoji} ${badge.label} 획득!`, 'success'), 1500);
+
+    // 배지 보상 처리 (멱등성 보장, B4)
+    const rewardedKey = 'rf_season_rewarded_' + prevSeasonKey;
+    if (!localStorage.getItem(rewardedKey)) {
+      const ranked = all.filter(r => r.firstLogDate).sort((a, b) => (b.seasonXp || 0) - (a.seasonXp || 0));
+      const myIdx = ranked.findIndex(r => r.username === myName);
+      if (myIdx >= 0) {
+        const myRank = myIdx + 1;
+        const badge = CONFIG.SEASON_BADGES.find(b => b.rank === myRank) || CONFIG.SEASON_BADGES.find(b => b.rank === 99);
+        if (badge) {
+          const earned = Storage.get('rf_season_badges', []);
+          earned.push({ badgeId: badge.id, season: prevSeasonKey, rank: myRank, earnedAt: new Date().toISOString() });
+          Storage.set('rf_season_badges', earned);
+        }
+      }
+      localStorage.setItem(rewardedKey, '1');
+    }
+
+    // 시즌 결산 모달 표시
+    setTimeout(() => _showSeasonWrapModal({ prevSeasonKey, all, myName }), 1200);
   } catch (e) { console.warn('[Season] 보상 처리 실패:', e); }
 }
+  function _showSeasonWrapModal({ prevSeasonKey, all, myName }) {
+  // 이미 표시했으면 스킵
+  const shownKey = 'rf_season_modal_' + prevSeasonKey;
+  if (localStorage.getItem(shownKey)) return;
+  localStorage.setItem(shownKey, '1');
 
+  const missions = CONFIG.TEAM_MISSIONS || [];
+  const totalMin   = all.reduce((acc, r) => acc + (r.seasonMin   || 0), 0);
+  const totalWater = all.reduce((acc, r) => acc + (r.seasonWater || 0), 0);
+  const participants = all.filter(r => r.firstLogDate).length;
+  const myParticipated = all.some(r => r.username === myName && r.firstLogDate);
+
+  // 팀 미션 달성 여부
+  const missionRows = missions.map(m => {
+    const sum = all.reduce((acc, r) => acc + (r[m.sumKey] || 0), 0);
+    const achieved = sum >= m.goal;
+    return `<div class="flex items-center justify-between">
+      <span class="text-xs text-gray-600">${m.icon} ${m.label} ${m.goal.toLocaleString()}${m.unit}</span>
+      <span class="text-xs font-black ${achieved ? 'text-green-600' : 'text-gray-300'}">${achieved ? '✅ 달성' : '미달성'}</span>
+    </div>`;
+  }).join('');
+
+  // 시즌 참여 아바타
+  const avatarDef = (CONFIG.SEASON_AVATARS || []).find(a => a.seasonKey === prevSeasonKey);
+  const avatarSection = myParticipated && avatarDef
+    ? `<div class="bg-amber-50 rounded-2xl p-3 flex items-center gap-3">
+        <span class="text-3xl">${avatarDef.emoji || '🎸'}</span>
+        <div>
+          <p class="text-xs font-black text-amber-700">${avatarDef.name} 획득!</p>
+          <p class="text-[10px] text-gray-400 mt-0.5">프로필에서 사용할 수 있어요</p>
+        </div>
+      </div>`
+    : myParticipated
+      ? `<p class="text-xs text-gray-400 text-center py-1">이번 시즌 아바타는 아직 준비 중이에요 🌱</p>`
+      : `<p class="text-xs text-gray-400 text-center py-1">이번 시즌 연습 기록이 없어요</p>`;
+
+  // 다음 시즌 시작일
+  const { start } = getSeasonInfo();
+  const nextStart = start.toLocaleDateString('ko-KR', { month: 'long', day: 'numeric' });
+
+  const modal = document.createElement('div');
+  modal.id = 'season-wrap-modal';
+  modal.className = 'fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm';
+  modal.innerHTML = `
+    <div class="bg-white rounded-3xl shadow-2xl w-full max-w-sm overflow-hidden">
+      <!-- 헤더 -->
+      <div class="bg-gradient-to-r from-amber-400 to-orange-500 px-5 py-5 text-center">
+        <p class="text-3xl mb-1">🎸</p>
+        <p class="font-black text-white text-lg leading-tight">시즌 종료!</p>
+        <p class="text-white/70 text-[11px] mt-0.5">${prevSeasonKey}</p>
+      </div>
+
+      <div class="p-5 space-y-4">
+        <!-- 팀 총 기록 -->
+        ${all.length > 0 ? `
+        <div>
+          <p class="text-[11px] font-black text-gray-400 mb-2">🎯 우리 크루 이번 시즌</p>
+          <div class="grid grid-cols-3 gap-2 text-center">
+            <div class="bg-amber-50 rounded-2xl p-2.5">
+              <p class="text-base font-black text-amber-600">${totalMin.toLocaleString()}</p>
+              <p class="text-[10px] text-gray-400">분 연습</p>
+            </div>
+            <div class="bg-blue-50 rounded-2xl p-2.5">
+              <p class="text-base font-black text-blue-500">${totalWater}</p>
+              <p class="text-[10px] text-gray-400">회 물주기</p>
+            </div>
+            <div class="bg-gray-50 rounded-2xl p-2.5">
+              <p class="text-base font-black text-gray-600">${participants}</p>
+              <p class="text-[10px] text-gray-400">명 참여</p>
+            </div>
+          </div>
+        </div>` : ''}
+
+        <!-- 팀 미션 결과 -->
+        ${missions.length > 0 ? `
+        <div>
+          <p class="text-[11px] font-black text-gray-400 mb-2">📋 팀 미션 결과</p>
+          <div class="space-y-1.5">${missionRows}</div>
+        </div>` : ''}
+
+        <!-- 내 시즌 아바타 -->
+        <div>
+          <p class="text-[11px] font-black text-gray-400 mb-2">🎁 내 시즌 아바타</p>
+          ${avatarSection}
+        </div>
+
+        <p class="text-center text-[10px] text-gray-300">다음 시즌 시작: ${nextStart}</p>
+
+        <button onclick="document.getElementById('season-wrap-modal').remove()"
+          class="w-full py-3 bg-gradient-to-r from-amber-500 to-orange-500 text-white text-sm font-black rounded-2xl hover:from-amber-600 hover:to-orange-600 transition-all shadow-sm">
+          다음 시즌도 파이팅! 🎸
+        </button>
+      </div>
+    </div>`;
+  document.body.appendChild(modal);
+}
     function recalcSeasonStats() {
     const { start } = getSeasonInfo();
     const today = new Date();
@@ -347,23 +448,21 @@ async function updateRanking() {
   const myAvatar = Storage.get(CONFIG.KEYS.AVATAR, '🎸');
   const todayStr = getTodayStr();
 
-  // 이번 시즌 첫 연습일 탐색 + 시즌 출석일수 계산 (한 번에)
-  let firstLogDate = Storage.get('rf_s_first_' + seasonKey, null);
-  let seasonAttendDays = 0;
-  const d = new Date(start);
-  while (true) {
-    const ds = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
-    if (ds > todayStr) break;
-    const log = Storage.getLog(ds);
-    if (log && (log.totalMin || 0) > 0) {
-      if (!firstLogDate) {
-        firstLogDate = ds;
-        Storage.set('rf_s_first_' + seasonKey, ds);
-      }
-      seasonAttendDays++;
-    }
-    d.setDate(d.getDate() + 1);
+// 이번 시즌 첫 연습일 + 시즌 출석일수 (시즌 시작일부터 순회하며 실측)
+let firstLogDate = null;
+let seasonAttendDays = 0;
+const d = new Date(start);
+while (true) {
+  const ds = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+  if (ds > todayStr) break;
+  const log = Storage.getLog(ds);
+  if (log && (log.totalMin || 0) > 0) {
+    if (!firstLogDate) firstLogDate = ds; // 루프가 시작일부터 순서대로 → 첫 발견 = 최초 일자
+    seasonAttendDays++;
   }
+  d.setDate(d.getDate() + 1);
+}
+if (firstLogDate) Storage.set('rf_s_first_' + seasonKey, firstLogDate); // 항상 최신값 저장
 
   if (!firstLogDate) return; // 이번 시즌 연습 없음 → 랭킹 미등록
   // 시즌 참여 아바타 지급 (1일 이상 참여)
