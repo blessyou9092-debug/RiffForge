@@ -1685,12 +1685,25 @@ const StudioUI = (() => {
   }
 
   // ── 세분화 선택 ──────────────────────────────────────────────────
-  function setSubdiv(id) { Metronome.setSubdiv(id); }
-  function setSwing(val) {
-    const amount = parseFloat(val) || 0;
-    Metronome.setSwing(amount);
-    BackingEngine.setSwing(amount);
-  }
+function setSubdiv(id) {
+  Metronome.setSubdiv(id);
+  document.querySelectorAll('.subdiv-btn').forEach(btn => {
+    const on = btn.dataset.subdiv === id;
+    btn.classList.toggle('bg-orange-500', on);
+    btn.classList.toggle('text-white', on);
+    btn.classList.toggle('border-orange-500', on);
+    btn.classList.toggle('bg-white', !on);
+    btn.classList.toggle('text-gray-600', !on);
+    btn.classList.toggle('border-gray-200', !on);
+  });
+}
+function setSwing(val) {
+  const amount = parseFloat(val) || 0;
+  Metronome.setSwing(amount);
+  BackingEngine.setSwing(amount);
+  const pct = document.getElementById('metro-swing-pct');
+  if (pct) pct.textContent = amount === 0 ? '스트레이트' : Math.round(amount * 100) + '%';
+}
 
   function setPendingBpm(val) {
     Metronome.setPendingBpm(val);
@@ -2432,15 +2445,7 @@ function renderGenreCards() {
         el.appendChild(opt);
       }
     });
-    const scaleEl = document.getElementById('fretboard-scale');
-    if (scaleEl && scaleEl.children.length === 0) {
-      Object.keys(CONFIG.SCALES).forEach(s => {
-        const opt = document.createElement('option');
-        opt.value = opt.textContent = s;
-        if (s === 'Minor Pentatonic') opt.selected = true;
-        scaleEl.appendChild(opt);
-      });
-    }
+
   }
 
   // ── 페이지 진입 시 초기화 ────────────────────────────────────────
