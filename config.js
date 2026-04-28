@@ -504,6 +504,11 @@ SEASON_AVATARS: [
   { seasonKey: '2026-S0525', name: '2026 6월 시즌 참여자', emoji: '🌌' },
   // 새 시즌마다 추가 (또는 svgPath 사용 가능 ) 참고: emoji 대신 img: 'assets/season_avatars/xxx.svg' 형식으로 SVG 이미지도 사용 가능합니다 (기존 VIRTUAL_GUITARS와 동일한 구조)
 ],
+  // ── 팀 미션 (시즌 단위 합산 목표) ──────────────────────────────
+TEAM_MISSIONS: [
+  { id: 'team_total_min',   label: '팀 연습 시간', icon: '⏱', goal: 300, unit: '분', sumKey: 'seasonMin' },
+  { id: 'team_total_water', label: '팀 물주기',   icon: '💧', goal: 25,  unit: '회', sumKey: 'seasonWater' },
+],
 };
 
 // ─── 유틸 함수 ────────────────────────────────────────────────────────
