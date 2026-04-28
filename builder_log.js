@@ -2070,66 +2070,75 @@ const CATEGORIES = [
     }
   }
 
-  async function render() {
-    const board = document.getElementById('ranking-board');
-    if (!board) return;
-    const { daysLeft } = getSeasonInfo();
-    const dLabel = daysLeft <= 0 ? 'D-DAY' : `D-${daysLeft}`;
-    const myName = Storage.get(CONFIG.KEYS.USERNAME, '');
+async function render() {
+  const board = document.getElementById('ranking-board');
+  if (!board) return;
+  const { daysLeft } = getSeasonInfo();
+  const dLabel = daysLeft <= 0 ? 'D-DAY' : `D-${daysLeft}`;
+  const myName = Storage.get(CONFIG.KEYS.USERNAME, '');
 
-    // 스켈레톤
-    board.innerHTML = CATEGORIES.map(() =>
-      `<div class="rounded-3xl bg-gray-100 animate-pulse" style="min-height:190px"></div>`
-    ).join('');
+  // 스켈레톤
+  board.innerHTML = CATEGORIES.map(() =>
+    `<div class="rounded-3xl bg-gray-100 animate-pulse" style="min-height:190px"></div>`
+  ).join('');
 
-    let all = [];
-    try { all = await _fetchAll(); } catch { }
+  let all = [];
+  try { all = await _fetchAll(); } catch { }
 
-    board.innerHTML = CATEGORIES.map(cat => {
-      const ranked = [...all].sort((a, b) => cat.key(b) - cat.key(a));
-      const top = ranked[0] || null;
-      const myIdx = myName ? ranked.findIndex(r => r.username === myName) : -1;
-      const myRank = myIdx >= 0 ? myIdx + 1 : null;
-      const myVal = cat.localKey ? Storage.get(cat.localKey, 0) : (all.find(r => r.username === myName)?.[cat.id] || 0);
-      const g = GRAD[cat.color];
+  // 분야별 MVP 배분: 앞선 카테고리에서 스포트라이트된 유저 추적
+  const spotlightUsed = new Set();
 
-      return `<div onclick="CrewRanking.openModal('${cat.id}')"
-        class="relative overflow-hidden rounded-3xl cursor-pointer bg-gradient-to-br ${g}
-          shadow-lg hover:shadow-xl hover:-translate-y-1 transition-all duration-200 flex flex-col"
-        style="min-height:190px">
-        <div class="absolute -top-5 -right-5 w-20 h-20 rounded-full bg-white/10 pointer-events-none"></div>
-        <div class="absolute -bottom-3 -left-3 w-12 h-12 rounded-full bg-white/10 pointer-events-none"></div>
+  board.innerHTML = CATEGORIES.map(cat => {
+    const ranked = [...all].sort((a, b) => cat.key(b) - cat.key(a));
+    const actualTop = ranked[0] || null;
+    // 이미 다른 분야 MVP인 유저를 건너뛰고 스포트라이트 선정
+    const spotlight = ranked.find(r => cat.key(r) > 0 && !spotlightUsed.has(r.username)) || actualTop;
+    if (spotlight) spotlightUsed.add(spotlight.username);
+    const isRotated = actualTop && spotlight && spotlight.username !== actualTop.username;
 
-        <div class="flex items-center justify-between px-3 pt-3 pb-1">
-          <div class="flex items-center gap-1.5">
-            <span class="text-xl drop-shadow">${cat.icon}</span>
-            <p class="text-[11px] font-black text-white/90">${cat.label}</p>
-          </div>
-          <span class="text-[10px] font-black bg-white/20 text-white rounded-full px-1.5 py-0.5">${dLabel}</span>
+    const myIdx = myName ? ranked.findIndex(r => r.username === myName) : -1;
+    const myRank = myIdx >= 0 ? myIdx + 1 : null;
+    const myVal = cat.localKey ? Storage.get(cat.localKey, 0) : (all.find(r => r.username === myName)?.[cat.id] || 0);
+    const g = GRAD[cat.color];
+
+    return `<div onclick="CrewRanking.openModal('${cat.id}')"
+      class="relative overflow-hidden rounded-3xl cursor-pointer bg-gradient-to-br ${g}
+        shadow-lg hover:shadow-xl hover:-translate-y-1 transition-all duration-200 flex flex-col"
+      style="min-height:190px">
+      <div class="absolute -top-5 -right-5 w-20 h-20 rounded-full bg-white/10 pointer-events-none"></div>
+      <div class="absolute -bottom-3 -left-3 w-12 h-12 rounded-full bg-white/10 pointer-events-none"></div>
+
+      <div class="flex items-center justify-between px-3 pt-3 pb-1">
+        <div class="flex items-center gap-1.5">
+          <span class="text-xl drop-shadow">${cat.icon}</span>
+          <p class="text-[11px] font-black text-white/90">${cat.label}</p>
         </div>
+        <span class="text-[10px] font-black bg-white/20 text-white rounded-full px-1.5 py-0.5">${dLabel}</span>
+      </div>
 
-        ${top ? `
-        <div class="flex-1 flex flex-col items-center justify-center px-3 py-1 gap-0.5">
-          <div class="text-2xl drop-shadow">${_renderAvatarHtml(top.avatar || '🎸', 'w-8 h-8')}</div>
-          <div class="flex items-center gap-0.5">
-            <span class="text-sm">🥇</span>
-            <p class="text-xs font-black text-white drop-shadow truncate max-w-[80px]">${top.username}</p>
-          </div>
-          <p class="text-lg font-black text-white drop-shadow">${cat.key(top).toLocaleString()}<span class="text-xs ml-0.5 opacity-80">${cat.unit}</span></p>
+      ${spotlight ? `
+      <div class="flex-1 flex flex-col items-center justify-center px-3 py-1 gap-0.5">
+        <div class="text-2xl drop-shadow">${_renderAvatarHtml(spotlight.avatar || '🎸', 'w-8 h-8')}</div>
+        <div class="flex items-center gap-0.5">
+          <span class="text-sm">🥇</span>
+          <p class="text-xs font-black text-white drop-shadow truncate max-w-[80px]">${spotlight.username}</p>
         </div>
-        ` : `
-        <div class="flex-1 flex items-center justify-center">
-          <p class="text-white/60 text-xs font-medium">아직 참가자 없음</p>
-        </div>
-        `}
+        <p class="text-lg font-black text-white drop-shadow">${cat.key(spotlight).toLocaleString()}<span class="text-xs ml-0.5 opacity-80">${cat.unit}</span></p>
+        ${isRotated ? `<p class="text-[9px] text-white/70 mt-0.5">👑 ${actualTop.username}은 다른 분야 MVP</p>` : ''}
+      </div>
+      ` : `
+      <div class="flex-1 flex items-center justify-center">
+        <p class="text-white/60 text-xs font-medium">아직 참가자 없음</p>
+      </div>
+      `}
 
-        <div class="mx-2 mb-3 px-2.5 py-1.5 rounded-2xl bg-white/20 backdrop-blur-sm flex items-center justify-between">
-          <span class="text-[10px] text-white/80 font-bold">내 순위</span>
-          <span class="text-[11px] font-black text-white">${myRank ? (myRank === 1 ? '👑 1위!' : myRank + '위') : '미참가'} · ${myVal.toLocaleString()} ${cat.unit}</span>
-        </div>
-      </div>`;
-    }).join('');
-  }
+      <div class="mx-2 mb-3 px-2.5 py-1.5 rounded-2xl bg-white/20 backdrop-blur-sm flex items-center justify-between">
+        <span class="text-[10px] text-white/80 font-bold">내 순위</span>
+        <span class="text-[11px] font-black text-white">${myRank ? (myRank === 1 ? '👑 1위!' : myRank + '위') : '미참가'} · ${myVal.toLocaleString()} ${cat.unit}</span>
+      </div>
+    </div>`;
+  }).join('');
+}
 return { render, openModal, _invalidateCache };
 })();
 
