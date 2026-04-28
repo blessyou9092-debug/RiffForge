@@ -2069,7 +2069,33 @@ const CATEGORIES = [
       if (body) body.innerHTML = `<p class="text-center text-red-400 py-8 text-sm">불러오기 실패. 네트워크를 확인해주세요.</p>`;
     }
   }
+function _renderTeamMissions(all) {
+  const container = document.getElementById('team-missions');
+  if (!container) return;
+  const missions = CONFIG.TEAM_MISSIONS || [];
+  if (missions.length === 0) { container.innerHTML = ''; return; }
 
+  container.innerHTML = missions.map(m => {
+    const sum = all.reduce((acc, r) => acc + (r[m.sumKey] || 0), 0);
+    const pct = Math.min(100, Math.round((sum / m.goal) * 100));
+    const achieved = sum >= m.goal;
+    const barColor = achieved ? 'bg-green-400' : 'bg-amber-400';
+    const valColor = achieved ? 'text-green-600' : 'text-amber-600';
+    return `<div class="flex items-center gap-3">
+      <span class="text-2xl shrink-0">${m.icon}</span>
+      <div class="flex-1 min-w-0">
+        <div class="flex justify-between items-center mb-1">
+          <p class="text-xs font-bold text-gray-700">${m.label}</p>
+          <p class="text-xs font-black ${valColor}">${sum.toLocaleString()} / ${m.goal.toLocaleString()} ${m.unit}</p>
+        </div>
+        <div class="w-full bg-gray-100 rounded-full h-2">
+          <div class="${barColor} h-2 rounded-full transition-all" style="width:${pct}%"></div>
+        </div>
+        ${achieved ? '<p class="text-[10px] text-green-600 font-bold mt-1">✅ 팀 달성 완료!</p>' : ''}
+      </div>
+    </div>`;
+  }).join('');
+}
 async function render() {
   const board = document.getElementById('ranking-board');
   if (!board) return;
@@ -2082,12 +2108,14 @@ async function render() {
     `<div class="rounded-3xl bg-gray-100 animate-pulse" style="min-height:190px"></div>`
   ).join('');
 
-  let all = [];
-  try { all = await _fetchAll(); } catch { }
+let all = [];
+try { all = await _fetchAll(); } catch { }
 
-  // 분야별 MVP 배분: 앞선 카테고리에서 스포트라이트된 유저 추적
-  const spotlightUsed = new Set();
+// 팀 미션 렌더 (같은 데이터 재사용)
+_renderTeamMissions(all);
 
+// 분야별 MVP 배분: 앞선 카테고리에서 스포트라이트된 유저 추적
+const spotlightUsed = new Set();
   board.innerHTML = CATEGORIES.map(cat => {
     const ranked = [...all].sort((a, b) => cat.key(b) - cat.key(a));
     const actualTop = ranked[0] || null;
