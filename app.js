@@ -61,15 +61,32 @@ const AppState = (() => {
   let weeklyMin = [0, 0, 0, 0, 0, 0, 0];
   let totalMin = 0;
   let seasonXp = 0, seasonWater = 0, seasonMin = 0; 
-
+function _getWeekKey() {
+  const d = new Date();
+  const day = d.getDay(); // 0=일, 1=월 ... 6=토
+  const diff = (day === 0) ? -6 : 1 - day; // 이번 주 월요일까지의 차이
+  const mon = new Date(d);
+  mon.setDate(d.getDate() + diff);
+  return `${mon.getFullYear()}-${String(mon.getMonth()+1).padStart(2,'0')}-${String(mon.getDate()).padStart(2,'0')}`;
+}
   async function loadAll() {
     xp = Storage.get(CONFIG.KEYS.XP, 0);
     water = Storage.get(CONFIG.KEYS.WATER, 0);
     streak = Storage.get(CONFIG.KEYS.STREAK, 0);
     lastPracticeDate = Storage.get(CONFIG.KEYS.LAST_PRACTICE_DATE, '');
     weeklyXp = Storage.get(CONFIG.KEYS.WEEKLY_XP, [0, 0, 0, 0, 0, 0, 0]);
-    weeklyMin = Storage.get(CONFIG.KEYS.WEEKLY_MIN, [0, 0, 0, 0, 0, 0, 0]);
-    totalMin = Storage.get(CONFIG.KEYS.TOTAL_MIN, 0);
+weeklyMin = Storage.get(CONFIG.KEYS.WEEKLY_MIN, [0, 0, 0, 0, 0, 0, 0]);
+totalMin = Storage.get(CONFIG.KEYS.TOTAL_MIN, 0);
+// 주간 초기화 (월요일 기준)
+const currentWeekKey = _getWeekKey();
+const storedWeekKey = Storage.get('rf_week_key', '');
+if (storedWeekKey !== currentWeekKey) {
+  weeklyXp = [0, 0, 0, 0, 0, 0, 0];
+  weeklyMin = [0, 0, 0, 0, 0, 0, 0];
+  Storage.set(CONFIG.KEYS.WEEKLY_XP, weeklyXp);
+  Storage.set(CONFIG.KEYS.WEEKLY_MIN, weeklyMin);
+  Storage.set('rf_week_key', currentWeekKey);
+}
     applyTheme(Storage.get(CONFIG.KEYS.THEME, 'amber'));
     streak = recalcStreak();
 
@@ -100,7 +117,7 @@ const AppState = (() => {
           if ((profile.xp || 0) > xp) { xp = profile.xp; Storage.set(CONFIG.KEYS.XP, xp); }
           if ((profile.water || 0) > water) { water = profile.water; Storage.set(CONFIG.KEYS.WATER, water); }
           if (profile.totalMin > totalMin) { totalMin = profile.totalMin; Storage.set(CONFIG.KEYS.TOTAL_MIN, totalMin); }
-          if (profile.weeklyMin) { weeklyMin = profile.weeklyMin; Storage.set(CONFIG.KEYS.WEEKLY_MIN, weeklyMin); }
+if (profile.weeklyMin && profile.weekKey === _getWeekKey()) { weeklyMin = profile.weeklyMin; Storage.set(CONFIG.KEYS.WEEKLY_MIN, weeklyMin); }
           if (profile.lastPracticeDate) { lastPracticeDate = profile.lastPracticeDate; Storage.set(CONFIG.KEYS.LAST_PRACTICE_DATE, lastPracticeDate); }
           // 아바타 동기화 (다른 기기에서 변경 시 반영)
           if (profile.avatar && profile.avatar !== Storage.get(CONFIG.KEYS.AVATAR, '🎸')) {
@@ -173,7 +190,7 @@ if (typeof FireDB !== 'undefined' && FireDB.isReady() && FireDB.getUsername()) {
   const harvested = Storage.get(CONFIG.KEYS.HARVEST, []);
   FireDB.saveProfile({
     xp, water, streak, lastPracticeDate,
-    weeklyXp, weeklyMin, totalMin,
+    weeklyXp, weeklyMin, weekKey: _getWeekKey(), totalMin,
     seasonXp, seasonWater, seasonMin, seasonKey: getSeasonInfo().seasonKey,
     chalProg, chalWeek,
     harvested,
@@ -187,7 +204,7 @@ if (typeof FireDB !== 'undefined' && FireDB.isReady() && FireDB.getUsername()) {
     xp += amount;
     seasonXp += amount;
     Storage.set('rf_season_xp', seasonXp);
-    weeklyXp[new Date().getDay()] = (weeklyXp[new Date().getDay()] || 0) + amount;
+    weeklyXp[(new Date().getDay() + 6) % 7] = (weeklyXp[(new Date().getDay() + 6) % 7] || 0) + amount;
     saveAll(); renderStats();
   }
 function addWater() {
@@ -597,8 +614,8 @@ function addWater() {
     const c = document.getElementById('week-chart');
     if (!c) return;
     const max = Math.max(...weeklyMin, 1);
-    const days = ['일', '월', '화', '수', '목', '금', '토'];
-    const tod = new Date().getDay();
+    const days = ['월', '화', '수', '목', '금', '토', '일'];
+const tod = (new Date().getDay() + 6) % 7;
     c.innerHTML = days.map((d, i) => {
       const val = weeklyMin[i] || 0;
       const pct = Math.round((val / max) * 100);
@@ -837,7 +854,7 @@ function addWater() {
       totalMin += m;
       seasonMin = Math.max(0, seasonMin + m);
       Storage.set('rf_season_min', seasonMin);
-      weeklyMin[new Date().getDay()] = (weeklyMin[new Date().getDay()] || 0) + m;
+      weeklyMin[(new Date().getDay() + 6) % 7] = (weeklyMin[(new Date().getDay() + 6) % 7] || 0) + m;
       saveAll(); renderStats();
     },
 
