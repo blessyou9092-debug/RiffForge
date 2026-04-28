@@ -1100,9 +1100,7 @@
             <select id="backing-key" onchange="StudioUI.setKey(this.value)"
               class="text-sm border border-gray-200 rounded-lg px-2 py-1.5 focus:outline-none focus:border-orange-400 bg-white font-bold text-gray-700 shrink-0">
             </select>
-            <select id="fretboard-scale" onchange="StudioUI.setScale(this.value)"
-              class="text-sm border border-gray-200 rounded-lg px-2 py-1.5 focus:outline-none focus:border-orange-400 bg-white text-gray-700 shrink-0">
-            </select>
+
 
             <!-- 박자 -->
             <select onchange="StudioUI.setTimeSig(this.value)"
@@ -1151,24 +1149,6 @@
                 <!-- Beat LED -->
                 <div id="beat-leds" class="flex gap-1 justify-center"></div>
 
-                <!-- 음색 버튼 4개 -->
-                <div>
-                  <p class="text-[10px] font-bold text-gray-400 mb-1.5">음색</p>
-                  <div class="grid grid-cols-2 gap-1">
-                    <button onclick="StudioUI.setSoundType('click')" data-sound="click"
-                      class="studio-sound-btn py-1.5 rounded-lg text-xs font-bold border transition-all bg-orange-500 text-white border-orange-500">
-                      🔔 클릭</button>
-                    <button onclick="StudioUI.setSoundType('wood')" data-sound="wood"
-                      class="studio-sound-btn py-1.5 rounded-lg text-xs font-bold border transition-all bg-white text-gray-600 border-gray-200 hover:border-orange-300">
-                      🪵 우드</button>
-                    <button onclick="StudioUI.setSoundType('beep')" data-sound="beep"
-                      class="studio-sound-btn py-1.5 rounded-lg text-xs font-bold border transition-all bg-white text-gray-600 border-gray-200 hover:border-orange-300">
-                      📢 벨</button>
-                    <button onclick="StudioUI.setSoundType('cowbell')" data-sound="cowbell"
-                      class="studio-sound-btn py-1.5 rounded-lg text-xs font-bold border transition-all bg-white text-gray-600 border-gray-200 hover:border-orange-300">
-                      🥁 스네어</button>
-                  </div>
-                </div>
 
                 <!-- 박자 패턴 원형 버튼 -->
                 <div>
@@ -1176,28 +1156,33 @@
                   <div id="beat-pattern-editor" class="flex flex-wrap gap-1.5 justify-center"></div>
                 </div>
 
-                <!-- 세분화 -->
-                <div>
-                  <p class="text-[10px] font-bold text-gray-400 mb-1">세분화</p>
-                  <select onchange="StudioUI.setSubdiv(this.value)"
-                    class="w-full text-xs border border-gray-200 rounded-lg px-2 py-1 focus:outline-none focus:border-orange-400">
-                    <option value="quarter">♩ 4분음표</option>
-                    <option value="eighth">♪ 8분음표</option>
-                    <option value="sixteenth">♬ 16분음표</option>
-                    <option value="triplet">3연음</option>
-                  </select>
-                </div>
-                <!-- 스윙 -->
-                <div>
-                  <p class="text-[10px] font-bold text-gray-400 mb-1">스윙</p>
-                  <select id="metro-swing-select" onchange="StudioUI.setSwing(this.value)"
-                    class="w-full text-xs border border-gray-200 rounded-lg px-2 py-1 focus:outline-none focus:border-orange-400">
-                    <option value="0">— 스트레이트</option>
-                    <option value="0.55">♩♪ 라이트 (55%)</option>
-                    <option value="0.6">♩♪ 미디엄 (60%)</option>
-                    <option value="0.67">♩♪ 헤비 (67%)</option>
-                  </select>
-                </div>
+<!-- 세분화 -->
+<div>
+  <p class="text-[10px] font-bold text-gray-400 mb-1.5">세분화</p>
+  <div class="grid grid-cols-4 gap-1">
+    <button onclick="StudioUI.setSubdiv('quarter')" data-subdiv="quarter"
+      class="subdiv-btn py-2 rounded-lg text-sm font-bold border transition-all bg-orange-500 text-white border-orange-500"
+      title="4분음표">♩</button>
+    <button onclick="StudioUI.setSubdiv('eighth')" data-subdiv="eighth"
+      class="subdiv-btn py-2 rounded-lg text-sm font-bold border transition-all bg-white text-gray-600 border-gray-200 hover:border-orange-300"
+      title="8분음표">♪</button>
+    <button onclick="StudioUI.setSubdiv('sixteenth')" data-subdiv="sixteenth"
+      class="subdiv-btn py-2 rounded-lg text-sm font-bold border transition-all bg-white text-gray-600 border-gray-200 hover:border-orange-300"
+      title="16분음표">♬</button>
+    <button onclick="StudioUI.setSubdiv('triplet')" data-subdiv="triplet"
+      class="subdiv-btn py-2 rounded-lg text-xs font-bold border transition-all bg-white text-gray-600 border-gray-200 hover:border-orange-300"
+      title="3연음">3연</button>
+  </div>
+</div>
+<!-- 스윙 -->
+<div>
+  <div class="flex justify-between mb-1">
+    <p class="text-[10px] font-bold text-gray-400">스윙</p>
+    <span id="metro-swing-pct" class="text-[10px] font-bold text-orange-500">스트레이트</span>
+  </div>
+  <input type="range" id="metro-swing-slider" min="0" max="0.67" step="0.01" value="0"
+    oninput="StudioUI.setSwing(this.value)" class="w-full accent-orange-500" />
+</div>
 
                 <!-- 메트로놈 볼륨 -->
                 <div>
