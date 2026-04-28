@@ -138,15 +138,27 @@ if (profile.weeklyMin && profile.weekKey === _getWeekKey()) { weeklyMin = profil
               localStorage.setItem('rf_chal_prog', JSON.stringify(profile.chalProg));
             }
           }
-          // 수확 컬렉션 복원 (클라우드 ∪ 로컬)
-          if (profile.harvested && Array.isArray(profile.harvested)) {
-            const localHarvested = Storage.get(CONFIG.KEYS.HARVEST, []);
-            const merged = [...new Set([...localHarvested, ...profile.harvested])];
-            if (merged.length > localHarvested.length) {
-              Storage.set(CONFIG.KEYS.HARVEST, merged);
-            }
-          }
-          renderStats();
+// 수확 컬렉션 복원 (클라우드 ∪ 로컬)
+if (profile.harvested && Array.isArray(profile.harvested)) {
+  const localHarvested = Storage.get(CONFIG.KEYS.HARVEST, []);
+  const merged = [...new Set([...localHarvested, ...profile.harvested])];
+  if (merged.length > localHarvested.length) {
+    Storage.set(CONFIG.KEYS.HARVEST, merged);
+  }
+}
+// 시즌 참여 아바타 복원 (클라우드 ∪ 로컬, seasonKey 기준 중복 제거)
+if (profile.seasonAvatars && Array.isArray(profile.seasonAvatars)) {
+  const localAvatars = Storage.get('rf_season_avatars', []);
+  const map = new Map();
+  [...localAvatars, ...profile.seasonAvatars].forEach(a => {
+    if (a && a.seasonKey && !map.has(a.seasonKey)) map.set(a.seasonKey, a);
+  });
+  const merged = [...map.values()];
+  if (merged.length > localAvatars.length) {
+    Storage.set('rf_season_avatars', merged);
+  }
+}
+renderStats();
           renderDashboard();
           console.log('[AppState] 프로필 클라우드 동기화 완료');
         }
@@ -301,7 +313,33 @@ async function _handleSeasonReset(prevSeasonKey) {
     }
     return { calcXp, calcWater, calcMin };
   }
+function _awardSeasonAvatar(seasonKey, attendDays) {
+  if (attendDays < 1) return;
+  const owned = Storage.get('rf_season_avatars', []);
+  if (owned.some(a => a.seasonKey === seasonKey)) return; // 이미 지급됨
 
+  const def = (CONFIG.SEASON_AVATARS || []).find(a => a.seasonKey === seasonKey);
+  if (!def) return; // 정의되지 않은 시즌은 패스
+
+  owned.push({
+    seasonKey,
+    name: def.name,
+    emoji: def.emoji || null,
+    img: def.img || null,
+    awardedAt: new Date().toISOString(),
+  });
+  Storage.set('rf_season_avatars', owned);
+
+  // Firestore 동기화
+  if (typeof FireDB !== 'undefined' && FireDB.isReady() && FireDB.getUsername()) {
+    FireDB.saveProfile({
+      seasonAvatars: owned,
+      updatedAt: new Date().toISOString(),
+    }).catch(e => console.warn('[Season] avatar 지급 실패:', e));
+  }
+
+  setTimeout(() => showToast(`🎁 시즌 아바타 획득! ${def.emoji || ''} ${def.name}`, 'success'), 1200);
+}
 async function updateRanking() {
   if (typeof FireDB === 'undefined' || !FireDB.isReady() || !FireDB.getUsername()) return;
   const { seasonKey, start } = getSeasonInfo();
@@ -328,6 +366,8 @@ async function updateRanking() {
   }
 
   if (!firstLogDate) return; // 이번 시즌 연습 없음 → 랭킹 미등록
+  // 시즌 참여 아바타 지급 (1일 이상 참여)
+_awardSeasonAvatar(seasonKey, seasonAttendDays);
   await FireDB.saveRanking(seasonKey, {
     username: myName, avatar: myAvatar,
     seasonXp, seasonWater, seasonMin,
@@ -786,6 +826,28 @@ const tod = (new Date().getDay() + 6) % 7;
             ${g.img
               ? `<img src="${g.img}" class="w-6 h-6 object-contain rounded" alt="${g.name}">`
               : `<span class="text-2xl">${g.emoji}</span>`}
+          </button>`;
+        }).join('');
+      }
+    }
+
+    // 시즌 참여 아바타 렌더링
+    const seasonEl = document.getElementById('profile-season-icons');
+    if (seasonEl) {
+      const owned = Storage.get('rf_season_avatars', []);
+      if (owned.length === 0) {
+        seasonEl.innerHTML = '<p class="text-xs text-gray-400">시즌에 하루라도 연습하면 시즌 아바타를 받아요 🌱</p>';
+      } else {
+        seasonEl.innerHTML = owned.map(a => {
+          const avatarVal = a.img || a.emoji;
+          const isSelected = curAvatar === avatarVal;
+          return `<button onclick="AppState._selectAvatar('${avatarVal}')"
+            class="avatar-opt w-10 h-10 rounded-xl flex items-center justify-center border-2 transition-all
+              ${isSelected ? 'border-amber-400 bg-amber-50' : 'border-gray-200 hover:border-amber-200'}"
+            data-avatar="${avatarVal}" title="${a.name}">
+            ${a.img
+              ? `<img src="${a.img}" class="w-6 h-6 object-contain rounded" alt="${a.name}">`
+              : `<span class="text-2xl">${a.emoji}</span>`}
           </button>`;
         }).join('');
       }
