@@ -502,7 +502,7 @@ SEASON_AVATARS: [
   { seasonKey: '2026-S0427', name: '2026 5월 시즌 참여자', emoji: '🌱' },
   { seasonKey: '2026-S0511', name: '2026 5월 후반 시즌 참여자', emoji: '🌿' },
   { seasonKey: '2026-S0525', name: '2026 6월 시즌 참여자', emoji: '🌳' },
-  // 새 시즌마다 추가 (또는 svgPath 사용 가능)
+  // 새 시즌마다 추가 (또는 svgPath 사용 가능 ) 참고: emoji 대신 img: 'assets/season_avatars/xxx.svg' 형식으로 SVG 이미지도 사용 가능합니다 (기존 VIRTUAL_GUITARS와 동일한 구조)
 ],
 };
 
