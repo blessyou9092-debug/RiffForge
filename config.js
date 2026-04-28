@@ -488,12 +488,22 @@ const CONFIG = {
 
   // ── 크루 시즌 랭킹 설정 ───────────────────────────────────────────
   SEASON_ANCHOR: '2026-03-30', // 격주 시즌 기준일 (반드시 월요일)
-  SEASON_BADGES: [
-    { id: 'season_rank1', rank: 1, label: '시즌 챔피언', emoji: '🏆', svgPath: 'assets/badges/season_rank1.svg' },
-    { id: 'season_rank2', rank: 2, label: '시즌 준우승', emoji: '🥈', svgPath: 'assets/badges/season_rank2.svg' },
-    { id: 'season_rank3', rank: 3, label: '시즌 3위',   emoji: '🥉', svgPath: 'assets/badges/season_rank3.svg' },
-    { id: 'season_part',  rank: 99, label: '시즌 참가', emoji: '🎸', svgPath: 'assets/badges/season_part.svg' },
-  ],
+SEASON_BADGES: [
+  { id: 'season_rank1', rank: 1, label: '시즌 챔피언', emoji: '🏆', svgPath: 'assets/badges/season_rank1.svg' },
+  { id: 'season_rank2', rank: 2, label: '시즌 준우승', emoji: '🥈', svgPath: 'assets/badges/season_rank2.svg' },
+  { id: 'season_rank3', rank: 3, label: '시즌 3위',   emoji: '🥉', svgPath: 'assets/badges/season_rank3.svg' },
+  { id: 'season_part',  rank: 99, label: '시즌 참가', emoji: '🎸', svgPath: 'assets/badges/season_part.svg' },
+],
+
+// ── 시즌 참여 아바타 (1일 이상 참여 시 자동 지급) ──────────────
+// 시즌이 새로 시작될 때마다 여기에 추가하세요.
+// seasonKey 형식: 'YYYY-SMMDD' (시즌 시작일 월요일 기준)
+SEASON_AVATARS: [
+  { seasonKey: '2026-S0427', name: '2026 5월 시즌 참여자', emoji: '🌱' },
+  { seasonKey: '2026-S0511', name: '2026 5월 후반 시즌 참여자', emoji: '🌿' },
+  { seasonKey: '2026-S0525', name: '2026 6월 시즌 참여자', emoji: '🌳' },
+  // 새 시즌마다 추가 (또는 svgPath 사용 가능)
+],
 };
 
 // ─── 유틸 함수 ────────────────────────────────────────────────────────
