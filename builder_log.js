@@ -1965,12 +1965,12 @@ function _checkAndReward(prog) {
 // CrewRanking: 실제 Firestore 기반 시즌 랭킹 (4개 카테고리)
 // ═══════════════════════════════════════════════════════════════════════════
 const CrewRanking = (() => {
-  const CATEGORIES = [
-    { id: 'seasonXp',    label: '시즌 XP',    icon: '⚡', unit: 'XP', key: r => r.seasonXp || 0,    color: 'amber',  localKey: 'rf_season_xp' },
-    { id: 'seasonWater', label: '시즌 물주기', icon: '💧', unit: '회', key: r => r.seasonWater || 0, color: 'blue',   localKey: 'rf_season_water' },
-    { id: 'streak',      label: '연속 출석',   icon: '🔥', unit: '일', key: r => r.streak || 0,      color: 'orange', localKey: CONFIG.KEYS.STREAK },
-    { id: 'seasonMin',   label: '연습 시간',   icon: '⏱', unit: '분', key: r => r.seasonMin || 0,   color: 'green',  localKey: 'rf_season_min' },
-  ];
+const CATEGORIES = [
+  { id: 'seasonXp',         label: '시즌 XP',    icon: '⚡', unit: 'XP', key: r => r.seasonXp || 0,         color: 'amber',  localKey: 'rf_season_xp' },
+  { id: 'seasonWater',      label: '시즌 물주기', icon: '💧', unit: '회', key: r => r.seasonWater || 0,      color: 'blue',   localKey: 'rf_season_water' },
+  { id: 'seasonAttendDays', label: '시즌 출석',   icon: '🔥', unit: '일', key: r => r.seasonAttendDays || 0, color: 'orange', localKey: null },
+  { id: 'seasonMin',        label: '연습 시간',   icon: '⏱', unit: '분', key: r => r.seasonMin || 0,        color: 'green',  localKey: 'rf_season_min' },
+];
   const GRAD = {
     amber: 'from-amber-400 to-orange-500',
     blue:  'from-blue-400 to-cyan-500',
@@ -2090,7 +2090,7 @@ const CrewRanking = (() => {
       const top = ranked[0] || null;
       const myIdx = myName ? ranked.findIndex(r => r.username === myName) : -1;
       const myRank = myIdx >= 0 ? myIdx + 1 : null;
-      const myVal = Storage.get(cat.localKey, 0);
+      const myVal = cat.localKey ? Storage.get(cat.localKey, 0) : (all.find(r => r.username === myName)?.[cat.id] || 0);
       const g = GRAD[cat.color];
 
       return `<div onclick="CrewRanking.openModal('${cat.id}')"
