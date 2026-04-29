@@ -3206,6 +3206,8 @@ function _getPentaPositions(rootNote, mode) {
         x1: '0%', y1: '0%', x2: '100%', y2: '0%',
         stops: [
           { offset: '0%',   color: c1.fill },
+          { offset: '50%',  color: c1.fill },
+          { offset: '50%',  color: c2.fill },
           { offset: '100%', color: c2.fill },
         ],
       };
