@@ -671,8 +671,8 @@ _awardSeasonAvatar(seasonKey, seasonAttendDays);
     if (!el) return;
     const wk = getWeekKey();
     // 주간 변경 감지: ChallengeTracker와 동일한 rf_chal_week_app 키 기준으로 진행도 리셋
-    if (localStorage.getItem('rf_chal_week_app') !== wk) {
-      localStorage.setItem('rf_chal_week_app', wk);
+    if (Storage.get('rf_chal_week_app', '') !== wk) {
+      Storage.set('rf_chal_week_app', wk);
       localStorage.setItem('rf_chal_prog', '{}');
       localStorage.removeItem('rf_chal_reward_init_' + wk);
     }
