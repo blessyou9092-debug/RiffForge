@@ -1775,6 +1775,8 @@ function setSwing(val) {
       el.style.borderColor = on ? '#FF6B00' : '';
       el.style.boxShadow = on ? '0 0 0 2px #FF6B0066' : '';
     });
+    const dd = document.getElementById('genre-select-dropdown');
+    if (dd) dd.value = id;
 
     // BPM, 키 반영
     setBpm(selectedGenre.defaultBpm);
@@ -2400,16 +2402,30 @@ function renderGenreCards() {
   const c = document.getElementById('backing-genres');
   if (!c) return;
 
+  // 데스크탑 드롭다운
+  const selectedId = selectedGenre?.id || CONFIG.BACKING_TRACKS[0]?.id || '';
+  const selectOpts = CONFIG.BACKING_TRACKS
+    .map(g => `<option value="${g.id}" ${g.id === selectedId ? 'selected' : ''}>${g.emoji} ${g.name}</option>`)
+    .join('');
+  const desktopSelect = `<select id="genre-select-dropdown"
+    onchange="StudioUI.selectGenre(this.value)"
+    class="hidden md:block w-full text-sm border border-gray-200 rounded-xl px-3 py-2
+           text-gray-700 font-bold bg-white focus:outline-none focus:border-orange-400
+           focus:ring-1 focus:ring-orange-300 transition-colors cursor-pointer mb-2">
+    ${selectOpts}
+  </select>`;
+
+  // 모바일 버튼 그리드 (1줄 고정)
   const defaultCards = CONFIG.BACKING_TRACKS.map(g => {
     const tip = (g.tip || '').replace(/'/g, '&#39;');
     return `<button data-genre="${g.id}" onclick="StudioUI.selectGenre('${g.id}')"
       onmouseenter="document.getElementById('backing-tip').textContent='${tip}'"
       onmouseleave="document.getElementById('backing-tip').textContent=''"
-      class="genre-card flex items-center gap-1.5 px-2 py-1.5 rounded-lg
+      class="genre-card md:hidden flex items-center gap-1.5 px-2 py-1.5 rounded-lg
         bg-white border border-gray-100 shadow-sm hover:border-orange-300 hover:shadow-md
         transition-all hover:scale-105 active:scale-95">
       <span class="text-base shrink-0">${g.emoji}</span>
-      <span class="font-bold text-[11px] text-gray-700 leading-tight text-left">${g.name}</span>
+      <span class="font-bold text-[11px] text-gray-700 truncate">${g.name}</span>
     </button>`;
   }).join('');
 
@@ -2448,9 +2464,8 @@ function renderGenreCards() {
     <div class="flex flex-col gap-1.5">${userCards}${addBtn}</div>
   `;
 
-  c.innerHTML = `<div class="grid grid-cols-2 gap-1.5">${defaultCards}</div>${userSection}`;
+  c.innerHTML = `${desktopSelect}<div class="grid grid-cols-2 gap-1.5">${defaultCards}</div>${userSection}`;
 }
-
 
   // ── 지판 키/스케일 셀렉트 초기화 ────────────────────────────────
   function initSelects() {
