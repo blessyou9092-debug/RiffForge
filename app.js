@@ -1743,6 +1743,16 @@ function setSwing(val) {
     btn.style.borderColor = '#FF6B00';
   }
 
+  // ── 볼륨 믹서 접기/펼치기 ────────────────────────────────────────
+  function toggleMixer() {
+    const body = document.getElementById('mixer-body');
+    const btn = document.getElementById('mixer-toggle-btn');
+    if (!body) return;
+    const hidden = body.style.display === 'none';
+    body.style.display = hidden ? '' : 'none';
+    if (btn) btn.textContent = hidden ? '접기 ▲' : '펼치기 ▼';
+  }
+
   // ══════════════════════════════════════════════════════════════════
   // 백킹 트랙 UI
   // ══════════════════════════════════════════════════════════════════
@@ -2500,7 +2510,7 @@ function renderGenreCards() {
     // 메트로놈
     setBpm, adjustBpm, toggleMetronome, tapTempo, setMetroVolume,
     setTimeSig, setSubdiv, setSoundType, setSwing, cycleBeat,
-    onMetroToggle, onBackingToggle, setHarmonyBtn,
+        onMetroToggle, onBackingToggle, setHarmonyBtn, toggleMixer,
     // 백킹
     selectGenre, setKey, setScale, toggleBacking, syncPlay, stopAll,
     editChordRoot, editChordType, addChord, removeChord, previewChord,
