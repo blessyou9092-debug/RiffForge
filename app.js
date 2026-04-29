@@ -1742,7 +1742,17 @@ function setSwing(val) {
     btn.style.color = 'white';
     btn.style.borderColor = '#FF6B00';
   }
+  // ── 메트로놈 고급 설정 접기/펼치기 ──────────────────────────────
+  function toggleMetroAdv() {
+    const body = document.getElementById('metro-adv-body');
+    const btn = document.getElementById('metro-adv-toggle-btn');
+    if (!body) return;
+    const isHidden = body.classList.toggle('hidden');
+    if (btn) btn.textContent = isHidden ? '⚙ 고급 설정 ▼' : '⚙ 고급 설정 ▲';
+  }
 
+  // ── 볼륨 믹서 접기/펼치기 ────────────────────────────────────────
+  function toggleMixer() {
   // ── 볼륨 믹서 접기/펼치기 ────────────────────────────────────────
   function toggleMixer() {
     const body = document.getElementById('mixer-body');
@@ -2510,7 +2520,7 @@ function renderGenreCards() {
     // 메트로놈
     setBpm, adjustBpm, toggleMetronome, tapTempo, setMetroVolume,
     setTimeSig, setSubdiv, setSoundType, setSwing, cycleBeat,
-        onMetroToggle, onBackingToggle, setHarmonyBtn, toggleMixer,
+    onMetroToggle, onBackingToggle, setHarmonyBtn, toggleMixer, toggleMetroAdv,
     // 백킹
     selectGenre, setKey, setScale, toggleBacking, syncPlay, stopAll,
     editChordRoot, editChordType, addChord, removeChord, previewChord,
