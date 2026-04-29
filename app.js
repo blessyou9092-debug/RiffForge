@@ -2930,13 +2930,61 @@ const ReferenceUI = (() => {
     };
 
 
-    const voicings = [
+       const voicings = [
       { key: 'root', shiftedVc: shifted.find(v => v.name === 'Root') },
       { key: '1st',  shiftedVc: shifted.find(v => v.name === '1st Inv') },
       { key: '2nd',  shiftedVc: shifted.find(v => v.name === '2nd Inv') },
       { key: '3rd',  shiftedVc: shifted.find(v => v.name === '3rd Inv') },
     ];
 
+    // ── All 모드: 단일 지판에 모든 inversion 합쳐서 표시 ──────────
+    if (_triadVoicing === 'all') {
+      ['1st', '2nd', '3rd'].forEach(k => {
+        const w = document.getElementById(`triad-fb-${k}-wrap`);
+        if (w) w.style.display = 'none';
+      });
+      const rootWrap = document.getElementById('triad-fb-root-wrap');
+      if (rootWrap) rootWrap.style.display = '';
+      const lbl = document.getElementById('triad-fb-root-label');
+      if (lbl) lbl.textContent = `All Inversions · ${strLabel}번줄`;
+
+      const INV_COLORS = {
+        root: { fill: '#f59e0b', stroke: '#d97706', textFill: '#fff' },
+        '1st': { fill: '#0ea5e9', stroke: '#0284c7', textFill: '#fff' },
+        '2nd': { fill: '#10b981', stroke: '#059669', textFill: '#fff' },
+        '3rd': { fill: '#8b5cf6', stroke: '#7c3aed', textFill: '#fff' },
+      };
+
+      const allDotMap = new Map();
+      const chordNoteMap = new Map();
+      voicings.forEach(({ key, shiftedVc }) => {
+        if (!shiftedVc) return;
+        shiftedVc.dots.forEach(d => {
+          allDotMap.set(`${5 - d.s}-${d.f}`, { invKey: key, r: d.r });
+          chordNoteMap.set(CONFIG.NOTES[(V9_OPEN[d.s] + d.f) % 12], d.r);
+        });
+      });
+
+      Fretboard.render('triad-fb-root', {
+        rootNote: _triadRoot,
+        startFret: 0, endFret: 17,
+        chordNoteMap, activeStrings,
+        noteColorFn: (fret, sIdx, note) => {
+          const info = allDotMap.get(`${sIdx}-${fret}`);
+          if (!info) return { fill: '#d1d5db', stroke: '#9ca3af', textFill: '#9ca3af', dotR: 8, label: note, opacity: 0.08 };
+          const c = INV_COLORS[info.invKey] || INV_COLORS.root;
+          return { fill: c.fill, stroke: c.stroke, textFill: c.textFill, dotR: info.r === 'R' ? 11 : 9, label: _triadLabelMode === 'note' ? note : info.r, opacity: 1 };
+        },
+        labelMode: 'note',
+      });
+
+      document.getElementById('triad-role-legend')?.style && (document.getElementById('triad-role-legend').style.display = 'none');
+      document.getElementById('triad-inv-legend')?.style && (document.getElementById('triad-inv-legend').style.display = '');
+      return;
+    }
+
+    document.getElementById('triad-role-legend')?.style && (document.getElementById('triad-role-legend').style.display = '');
+    document.getElementById('triad-inv-legend')?.style && (document.getElementById('triad-inv-legend').style.display = 'none');
 
     voicings.forEach(({ key, shiftedVc }) => {
       const containerId = `triad-fb-${key === 'root' ? 'root' : key}`;
