@@ -252,7 +252,7 @@ const FireDB = (() => {
   function subscribeBoard(callback) {
     return _boardCol()
       .orderBy('createdAt', 'desc')
-      .limit(10)
+      .limit(4)
       .onSnapshot(snap => {
         const posts = snap.docs.map(d => ({ id: d.id, ...d.data() }));
         const lastDoc = snap.docs.length ? snap.docs[snap.docs.length - 1] : null;
