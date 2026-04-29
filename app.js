@@ -1753,8 +1753,6 @@ function setSwing(val) {
 
   // ── 볼륨 믹서 접기/펼치기 ────────────────────────────────────────
   function toggleMixer() {
-  // ── 볼륨 믹서 접기/펼치기 ────────────────────────────────────────
-  function toggleMixer() {
     const body = document.getElementById('mixer-body');
     const btn = document.getElementById('mixer-toggle-btn');
     if (!body) return;
