@@ -1293,18 +1293,6 @@
                   <button onclick="StudioUI.addChord()"
                     class="text-xs px-2 py-0.5 bg-gray-100 hover:bg-orange-100 rounded-lg text-gray-600 font-bold transition-colors">+
                     추가</button>
-                  <!-- 화성 악기 -->
-                  <div class="flex gap-1 ml-auto">
-                    <button onclick="BackingEngine.setHarmonyInstrument('piano'); StudioUI.setHarmonyBtn(this)"
-                      data-harm="piano"
-                      class="studio-harm-btn text-xs px-2 py-0.5 rounded-lg font-bold border transition-all bg-orange-500 text-white border-orange-500">🎹</button>
-                    <button onclick="BackingEngine.setHarmonyInstrument('guitar'); StudioUI.setHarmonyBtn(this)"
-                      data-harm="guitar"
-                      class="studio-harm-btn text-xs px-2 py-0.5 rounded-lg font-bold border transition-all bg-white text-gray-600 border-gray-200 hover:border-orange-300">🎸</button>
-                    <button onclick="BackingEngine.setHarmonyInstrument('synth'); StudioUI.setHarmonyBtn(this)"
-                      data-harm="synth"
-                      class="studio-harm-btn text-xs px-2 py-0.5 rounded-lg font-bold border transition-all bg-white text-gray-600 border-gray-200 hover:border-orange-300">🎛</button>
-                  </div>
                 </div>
                 <!-- 코드 카드들 -->
                 <div id="chord-progression-editor" class="grid grid-cols-4 gap-2">
@@ -1352,8 +1340,12 @@
 
           <!-- ══ BOTTOM: 볼륨 믹서 ════════════════════════════════════ -->
           <div class="bg-white rounded-2xl shadow-sm border border-gray-100 px-5 py-3">
-            <p class="text-xs font-black text-gray-600 mb-3">🎚 볼륨 믹서</p>
-            <div class="grid grid-cols-2 md:grid-cols-5 gap-3 md:gap-4">
+            <div class="flex items-center justify-between mb-3">
+              <p class="text-xs font-black text-gray-600">🎚 볼륨 믹서</p>
+              <button onclick="StudioUI.toggleMixer()" id="mixer-toggle-btn"
+                class="text-[10px] text-gray-400 hover:text-orange-500 transition-colors font-bold">접기 ▲</button>
+            </div>
+            <div id="mixer-body" class="grid grid-cols-2 md:grid-cols-5 gap-3 md:gap-4">
               <div>
                 <div class="flex justify-between text-[10px] text-gray-400 mb-1"><span>🥁 킥</span><span
                     id="mix-kick-val">80%</span></div>
@@ -1383,15 +1375,27 @@
                   class="w-full accent-orange-500" />
               </div>
               <div>
-                <div class="flex justify-between text-[10px] text-gray-400 mb-1"><span>🎹 화성</span><span
-                    id="mix-harm-val">45%</span></div>
+                <div class="flex items-center justify-between text-[10px] text-gray-400 mb-1">
+                  <span>🎹 화성</span>
+                  <div class="flex items-center gap-1">
+                    <button onclick="BackingEngine.setHarmonyInstrument('piano'); StudioUI.setHarmonyBtn(this)"
+                      data-harm="piano"
+                      class="studio-harm-btn px-1.5 py-0.5 rounded-lg font-bold border transition-all bg-orange-500 text-white border-orange-500">🎹</button>
+                    <button onclick="BackingEngine.setHarmonyInstrument('guitar'); StudioUI.setHarmonyBtn(this)"
+                      data-harm="guitar"
+                      class="studio-harm-btn px-1.5 py-0.5 rounded-lg font-bold border transition-all bg-white text-gray-600 border-gray-200 hover:border-orange-300">🎸</button>
+                    <button onclick="BackingEngine.setHarmonyInstrument('synth'); StudioUI.setHarmonyBtn(this)"
+                      data-harm="synth"
+                      class="studio-harm-btn px-1.5 py-0.5 rounded-lg font-bold border transition-all bg-white text-gray-600 border-gray-200 hover:border-orange-300">🎛</button>
+                    <span id="mix-harm-val" class="ml-1">45%</span>
+                  </div>
+                </div>
                 <input type="range" min="0" max="1" step="0.05" value="0.45"
                   oninput="BackingEngine.setVolume('harmony',parseFloat(this.value)); document.getElementById('mix-harm-val').textContent=Math.round(this.value*100)+'%'"
                   class="w-full accent-orange-500" />
               </div>
             </div>
           </div>
-
         </section>
 
 
