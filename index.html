@@ -1127,11 +1127,11 @@
             </button>
           </div>
 
-          <!-- ══ MAIN 3-COLUMN GRID ════════════════════════════════════ -->
-          <div class="grid gap-3 mb-3 md:[grid-template-columns:200px_1fr_220px]">
+          <!-- ══ MAIN 2-COLUMN GRID ════════════════════════════════════ -->
+          <div class="grid gap-3 mb-3 md:grid-cols-[1fr_220px] md:grid-rows-[auto_1fr]">
 
-            <!-- ─── LEFT: 메트로놈 ──────────────────────────────────── -->
-            <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden flex flex-col">
+            <!-- ─── 메트로놈 ──────────────────────────────────────────── -->
+            <div class="md:col-start-2 md:row-start-1 bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden flex flex-col">
               <!-- 헤더 + 토글 -->
               <div class="flex items-center justify-between px-4 py-3 border-b border-gray-100">
                 <span class="font-black text-gray-800 text-sm">🥁 메트로놈</span>
@@ -1293,7 +1293,7 @@
             </div>
 
             <!-- ─── CENTER: 코드 진행 + 지판 ──────────────────────────── -->
-            <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden flex flex-col">
+            <div class="md:col-start-1 md:row-start-1 md:row-span-2 bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden flex flex-col">
               <!-- 코드 진행 영역 -->
               <div class="px-4 pt-3 pb-2 border-b border-gray-100">
                 <div class="flex items-center gap-2 mb-2">
@@ -1321,8 +1321,8 @@
               </div>
             </div>
 
-            <!-- ─── RIGHT: 백킹 트랙 ───────────────────────────────────── -->
-            <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden flex flex-col">
+            <!-- ─── 백킹 트랙 ────────────────────────────────────────────── -->
+            <div class="md:col-start-2 md:row-start-2 bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden flex flex-col">
               <!-- 헤더 + 토글 -->
               <div class="flex items-center justify-between px-4 py-3 border-b border-gray-100">
                 <span class="font-black text-gray-800 text-sm">🎸 백킹</span>
