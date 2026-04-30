@@ -1788,26 +1788,54 @@
                 </div>
                 <p class="text-[10px] text-gray-400 mt-1.5">현재 선택된 코드를 추가 · 카드 클릭으로 전환 · 호버 후 ✕로 삭제</p>
               </div>
-              <div class="flex items-center gap-2 mb-3 flex-wrap">
+                           <div class="mb-3">
                 <select id="chord-tone-ref-root" onchange="ReferenceUI.setChordToneRoot(this.value)"
-                  class="text-xs border border-gray-200 rounded-lg px-2 py-1.5 focus:outline-none focus:border-amber-300 font-bold"></select>
-                <div class="flex flex-wrap gap-1">
-                  <button data-ctype="major" onclick="ReferenceUI.setChordToneType('major')"
-                    class="chord-type-ref-btn text-xs px-2.5 py-1 rounded-lg bg-amber-500 text-white font-bold">Major</button>
-                  <button data-ctype="minor" onclick="ReferenceUI.setChordToneType('minor')"
-                    class="chord-type-ref-btn text-xs px-2.5 py-1 rounded-lg bg-white border text-gray-600 font-bold hover:bg-amber-50">Minor</button>
-                  <button data-ctype="7" onclick="ReferenceUI.setChordToneType('7')"
-                    class="chord-type-ref-btn text-xs px-2.5 py-1 rounded-lg bg-white border text-gray-600 font-bold hover:bg-amber-50">7</button>
-                  <button data-ctype="maj7" onclick="ReferenceUI.setChordToneType('maj7')"
-                    class="chord-type-ref-btn text-xs px-2.5 py-1 rounded-lg bg-white border text-gray-600 font-bold hover:bg-amber-50">maj7</button>
-                  <button data-ctype="m7" onclick="ReferenceUI.setChordToneType('m7')"
-                    class="chord-type-ref-btn text-xs px-2.5 py-1 rounded-lg bg-white border text-gray-600 font-bold hover:bg-amber-50">m7</button>
-                  <button data-ctype="m7b5" onclick="ReferenceUI.setChordToneType('m7b5')"
-                    class="chord-type-ref-btn text-xs px-2.5 py-1 rounded-lg bg-white border text-gray-600 font-bold hover:bg-amber-50">m7♭5</button>
-                  <button data-ctype="dim" onclick="ReferenceUI.setChordToneType('dim')"
-                    class="chord-type-ref-btn text-xs px-2.5 py-1 rounded-lg bg-white border text-gray-600 font-bold hover:bg-amber-50">dim</button>
-                  <button data-ctype="aug" onclick="ReferenceUI.setChordToneType('aug')"
-                    class="chord-type-ref-btn text-xs px-2.5 py-1 rounded-lg bg-white border text-gray-600 font-bold hover:bg-amber-50">aug</button>
+                  class="text-xs border border-gray-200 rounded-lg px-2 py-1.5 focus:outline-none focus:border-amber-300 font-bold mb-2"></select>
+                <div class="flex flex-col gap-1.5">
+                  <div class="flex items-center gap-1 flex-wrap">
+                    <span class="text-[10px] text-gray-400 w-8 shrink-0">Triad</span>
+                    <button data-ctype="major" onclick="ReferenceUI.setChordToneType('major')"
+                      class="chord-type-ref-btn text-xs px-2.5 py-1 rounded-lg bg-amber-500 text-white font-bold">Major</button>
+                    <button data-ctype="minor" onclick="ReferenceUI.setChordToneType('minor')"
+                      class="chord-type-ref-btn text-xs px-2.5 py-1 rounded-lg bg-white border text-gray-600 font-bold hover:bg-amber-50">Minor</button>
+                    <button data-ctype="dim" onclick="ReferenceUI.setChordToneType('dim')"
+                      class="chord-type-ref-btn text-xs px-2.5 py-1 rounded-lg bg-white border text-gray-600 font-bold hover:bg-amber-50">dim</button>
+                    <button data-ctype="aug" onclick="ReferenceUI.setChordToneType('aug')"
+                      class="chord-type-ref-btn text-xs px-2.5 py-1 rounded-lg bg-white border text-gray-600 font-bold hover:bg-amber-50">aug</button>
+                  </div>
+                  <div class="flex items-center gap-1 flex-wrap">
+                    <span class="text-[10px] text-gray-400 w-8 shrink-0">7th</span>
+                    <button data-ctype="7" onclick="ReferenceUI.setChordToneType('7')"
+                      class="chord-type-ref-btn text-xs px-2.5 py-1 rounded-lg bg-white border text-gray-600 font-bold hover:bg-amber-50">7</button>
+                    <button data-ctype="maj7" onclick="ReferenceUI.setChordToneType('maj7')"
+                      class="chord-type-ref-btn text-xs px-2.5 py-1 rounded-lg bg-white border text-gray-600 font-bold hover:bg-amber-50">maj7</button>
+                    <button data-ctype="m7" onclick="ReferenceUI.setChordToneType('m7')"
+                      class="chord-type-ref-btn text-xs px-2.5 py-1 rounded-lg bg-white border text-gray-600 font-bold hover:bg-amber-50">m7</button>
+                    <button data-ctype="m7b5" onclick="ReferenceUI.setChordToneType('m7b5')"
+                      class="chord-type-ref-btn text-xs px-2.5 py-1 rounded-lg bg-white border text-gray-600 font-bold hover:bg-amber-50">m7♭5</button>
+                  </div>
+                  <div class="flex items-center gap-1 flex-wrap">
+                    <span class="text-[10px] text-gray-400 w-8 shrink-0">9th</span>
+                    <button data-ctype="dom9" onclick="ReferenceUI.setChordToneType('dom9')"
+                      class="chord-type-ref-btn text-xs px-2.5 py-1 rounded-lg bg-white border text-gray-600 font-bold hover:bg-amber-50">9</button>
+                    <button data-ctype="M9" onclick="ReferenceUI.setChordToneType('M9')"
+                      class="chord-type-ref-btn text-xs px-2.5 py-1 rounded-lg bg-white border text-gray-600 font-bold hover:bg-amber-50">maj9</button>
+                    <button data-ctype="m9" onclick="ReferenceUI.setChordToneType('m9')"
+                      class="chord-type-ref-btn text-xs px-2.5 py-1 rounded-lg bg-white border text-gray-600 font-bold hover:bg-amber-50">m9</button>
+                    <button data-ctype="add9" onclick="ReferenceUI.setChordToneType('add9')"
+                      class="chord-type-ref-btn text-xs px-2.5 py-1 rounded-lg bg-white border text-gray-600 font-bold hover:bg-amber-50">add9</button>
+                  </div>
+                  <div class="flex items-center gap-1 flex-wrap">
+                    <span class="text-[10px] text-gray-400 w-8 shrink-0">sus</span>
+                    <button data-ctype="sus4" onclick="ReferenceUI.setChordToneType('sus4')"
+                      class="chord-type-ref-btn text-xs px-2.5 py-1 rounded-lg bg-white border text-gray-600 font-bold hover:bg-amber-50">sus4</button>
+                    <button data-ctype="sus2" onclick="ReferenceUI.setChordToneType('sus2')"
+                      class="chord-type-ref-btn text-xs px-2.5 py-1 rounded-lg bg-white border text-gray-600 font-bold hover:bg-amber-50">sus2</button>
+                    <button data-ctype="6" onclick="ReferenceUI.setChordToneType('6')"
+                      class="chord-type-ref-btn text-xs px-2.5 py-1 rounded-lg bg-white border text-gray-600 font-bold hover:bg-amber-50">6</button>
+                    <button data-ctype="m6" onclick="ReferenceUI.setChordToneType('m6')"
+                      class="chord-type-ref-btn text-xs px-2.5 py-1 rounded-lg bg-white border text-gray-600 font-bold hover:bg-amber-50">m6</button>
+                  </div>
                 </div>
               </div>
               <!-- 범례 -->
