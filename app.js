@@ -2581,6 +2581,9 @@ const ReferenceUI = (() => {
   let _chordToneRoot = 'A';
   let _chordToneType = 'major';
   let _chordToneLabelMode = 'interval'; // 'interval' | 'note'
+  let _ctProgMode = false;
+  let _ctProgression = []; // [{root, type}]
+  let _ctProgIdx = -1;
 
   // ── 공통 상수 ────────────────────────────────────────────────────────────
   // 개방현 MIDI (strIdx 0=1번e, 1=2번B, 2=3번G, 3=4번D, 4=5번A, 5=6번E)
@@ -3561,8 +3564,79 @@ const VCOLS = { all: 'bg-gray-700', root: 'bg-amber-500', '1st': 'bg-indigo-500'
     });
   }
 
-  function setChordToneRoot(root) { _chordToneRoot = root; renderChordToneRef(); }
+  // ── 코드 진행 모드 ────────────────────────────────────────────────────────
+  function _ctChordName(root, type) {
+    const sfx = { major: '', minor: 'm', '7': '7', maj7: 'M7', m7: 'm7', m7b5: 'm7♭5', dim: 'dim', aug: 'aug' };
+    return root + (sfx[type] !== undefined ? sfx[type] : type);
+  }
 
+  function toggleCtProgMode() {
+    _ctProgMode = !_ctProgMode;
+    const editor = document.getElementById('ct-prog-editor');
+    const btn = document.getElementById('ct-prog-toggle-btn');
+    if (editor) editor.classList.toggle('hidden', !_ctProgMode);
+    if (btn) {
+      btn.classList.toggle('bg-amber-500', _ctProgMode);
+      btn.classList.toggle('text-white', _ctProgMode);
+      btn.classList.toggle('border-transparent', _ctProgMode);
+      btn.classList.toggle('border-gray-200', !_ctProgMode);
+      btn.classList.toggle('text-gray-500', !_ctProgMode);
+    }
+    if (_ctProgMode && _ctProgression.length === 0) {
+      _ctProgression.push({ root: _chordToneRoot, type: _chordToneType });
+      _ctProgIdx = 0;
+      renderCtProg();
+    }
+  }
+
+  function renderCtProg() {
+    const chips = document.getElementById('ct-prog-chips');
+    if (!chips) return;
+    chips.innerHTML = _ctProgression.map((c, i) => {
+      const name = _ctChordName(c.root, c.type);
+      const active = i === _ctProgIdx;
+      return `<button onclick="ReferenceUI.ctProgSelect(${i})"
+        class="relative group text-xs px-3 py-1.5 rounded-lg font-bold border transition-all ${active
+          ? 'bg-amber-500 text-white border-amber-500 shadow-sm'
+          : 'bg-white text-gray-700 border-gray-200 hover:border-amber-300'}">
+        ${name}
+        <span onclick="event.stopPropagation();ReferenceUI.ctProgDelete(${i})"
+          class="absolute -top-1.5 -right-1.5 w-4 h-4 rounded-full bg-red-400 text-white text-[9px] items-center justify-center hidden group-hover:flex cursor-pointer leading-none">✕</span>
+      </button>`;
+    }).join('');
+  }
+
+  function ctProgAdd() {
+    _ctProgression.push({ root: _chordToneRoot, type: _chordToneType });
+    _ctProgIdx = _ctProgression.length - 1;
+    renderCtProg();
+  }
+
+  function ctProgSelect(idx) {
+    if (idx < 0 || idx >= _ctProgression.length) return;
+    _ctProgIdx = idx;
+    const c = _ctProgression[idx];
+    _chordToneRoot = c.root;
+    _chordToneType = c.type;
+    const rootEl = document.getElementById('chord-tone-ref-root');
+    if (rootEl) rootEl.value = _chordToneRoot;
+    document.querySelectorAll('.chord-type-ref-btn').forEach(btn => {
+      const on = btn.dataset.ctype === _chordToneType;
+      btn.classList.toggle('bg-amber-500', on); btn.classList.toggle('text-white', on);
+      btn.classList.toggle('bg-white', !on); btn.classList.toggle('text-gray-600', !on);
+    });
+    renderCtProg();
+    renderChordToneRef();
+  }
+
+  function ctProgDelete(idx) {
+    _ctProgression.splice(idx, 1);
+    if (_ctProgression.length === 0) { _ctProgIdx = -1; renderCtProg(); return; }
+    _ctProgIdx = Math.min(_ctProgIdx, _ctProgression.length - 1);
+    ctProgSelect(_ctProgIdx);
+  }
+
+  function setChordToneRoot(root) { _chordToneRoot = root; renderChordToneRef(); }
   function setChordToneLabelMode(mode) {
     _chordToneLabelMode = mode;
     document.querySelectorAll('.ct-label-btn').forEach(btn => {
@@ -3593,7 +3667,7 @@ const VCOLS = { all: 'bg-gray-700', root: 'bg-amber-500', '1st': 'bg-indigo-500'
     setPentaPos, setPentaKey, setPentaView, setPentaLabel,
     setCagedPos, setLabelMode, onScaleChange,
     setChordToneRoot, setChordToneType, setChordToneLabelMode,
-  };
+    toggleCtProgMode, ctProgAdd, ctProgSelect, ctProgDelete,  };
 })();
 
 // ═══════════════════════════════════════════════════════════════════════════
