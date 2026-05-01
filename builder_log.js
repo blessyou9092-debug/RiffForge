@@ -1649,8 +1649,8 @@ async function syncFromCloud() {
           <p class="text-sm font-bold text-gray-800 group-hover:text-amber-600 truncate transition-colors">${song.title}</p>
           <p class="text-xs text-gray-400 truncate">${song.artist || '아티스트 없음'}</p>
         </div>
-        <span class="text-xs px-2 py-0.5 rounded-full font-bold shrink-0 w-[72px] text-center ${sty.badge}">${STATE_LABELS[song.state]}</span>
-        <div class="hidden sm:flex flex-col items-center gap-0.5 w-14 shrink-0">
+        <span class="text-xs px-2 py-0.5 rounded-full font-bold shrink-0 w-[72px] text-center hidden sm:inline-flex justify-center ${sty.badge}">${STATE_LABELS[song.state]}</span>
+        <div class="flex flex-col items-center gap-0.5 w-14 shrink-0">
           <span class="text-xs font-bold text-gray-700">${pct}%</span>
           <div class="w-full bg-gray-100 rounded-full h-1.5">
             <div class="${sty.bar} h-1.5 rounded-full" style="width:${pct}%"></div>
@@ -1680,8 +1680,8 @@ async function syncFromCloud() {
       <div class="flex items-center gap-3 px-4 py-2 bg-amber-50 border-b border-amber-100 text-[11px] font-black text-gray-400 uppercase tracking-wide">
         <span class="w-5 shrink-0 hidden sm:block text-center">#</span>
         <span class="flex-1">제목 / 아티스트</span>
-        <span class="w-[72px] text-center shrink-0">상태</span>
-        <span class="hidden sm:block w-14 text-center shrink-0">완성도</span>
+        <span class="hidden sm:block w-[72px] text-center shrink-0">상태</span>
+        <span class="w-14 text-center shrink-0">완성도</span>
         <span class="hidden sm:block w-12 text-center shrink-0">마감</span>
         <span class="w-16 text-right shrink-0">액션</span>
       </div>`;
