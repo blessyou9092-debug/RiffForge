@@ -115,8 +115,8 @@ const RoadmapUI = (() => {
     const done = _isComplete(rmId, stage.id);
     return `
       <div class="bg-white rounded-2xl border ${done ? 'border-emerald-200' : 'border-amber-100'} shadow-sm overflow-hidden">
-        <button onclick="RoadmapUI.toggleStage(${stage.id})"
-          class="w-full flex items-center gap-3 p-4 text-left hover:bg-amber-50 transition-all">
+        <div onclick="RoadmapUI.toggleStage(${stage.id})"
+          class="flex items-center gap-3 p-4 cursor-pointer hover:bg-amber-50 transition-all select-none">
           <button onclick="RoadmapUI.toggleComplete('${rmId}', ${stage.id}, event)"
             class="w-7 h-7 rounded-full border-2 ${done ? 'bg-emerald-500 border-emerald-500 text-white' : 'border-gray-300 text-gray-400'} flex items-center justify-center font-black text-sm shrink-0 hover:border-emerald-400 transition-all" title="완료 표시">
             ${done ? '✓' : stage.id}
@@ -126,11 +126,10 @@ const RoadmapUI = (() => {
             <p class="text-xs text-gray-500 mt-0.5">${stage.summary}</p>
           </div>
           <span class="text-gray-400 text-xs shrink-0">${expanded ? '▲' : '▼'}</span>
-        </button>
+        </div>
         ${expanded ? _renderStageDetail(stage) : ''}
       </div>`;
   }
-
   function _renderStageDetail(stage) {
     let body = '';
     if (stage.steps) {
