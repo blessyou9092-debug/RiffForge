@@ -1176,6 +1176,7 @@ const AppSidebar = (() => {
     { id: 'studio', label: '메트로놈 & 백킹', icon: 'fa-music' },
     { id: 'tree', label: '기타 나무', icon: 'fa-seedling' },
     { id: 'reference', label: '참고 자료', icon: 'fa-book-open' },
+    { id: 'roadmap', label: '마스터리 로드맵', icon: 'fa-map' },
     { id: 'repertoire', label: '연습곡 관리', icon: 'fa-guitar' },
     { id: 'ranking', label: '크루 랭킹', icon: 'fa-ranking-star' },
     { id: 'board', label: '크루 게시판', icon: 'fa-comments' },
@@ -1249,6 +1250,7 @@ const AppSidebar = (() => {
     if (id === 'tree') AppState.renderTreeGarden();
     if (id === 'studio') StudioUI.onEnter();
     if (id === 'reference') ReferenceUI.onEnter();
+    if (id === 'roadmap') RoadmapUI.onEnter();
     if (id === 'repertoire') {
     RepertoireTracker.render();            // 로컬 데이터 즉시 표시
     RepertoireTracker.syncFromCloud();     // 백그라운드 클라우드 동기화
