@@ -1447,6 +1447,16 @@
               </button>
             </div>
           </div>
+
+          <!-- 프렛 수 전환 -->
+          <div class="flex items-center gap-1.5 mb-4">
+            <span class="text-[10px] text-gray-400 font-bold tracking-wide">지판</span>
+            <button data-fret="18" onclick="ReferenceUI.setRefFretMax(18)"
+              class="ref-fret-btn text-xs px-2.5 py-1 rounded-lg bg-amber-500 text-white font-bold">18F</button>
+            <button data-fret="24" onclick="ReferenceUI.setRefFretMax(24)"
+              class="ref-fret-btn text-xs px-2.5 py-1 rounded-lg bg-white border text-gray-600 font-bold hover:bg-amber-50">24F</button>
+          </div>
+
           <!-- ══ 탭 패널 (모두 동일 depth, page-reference 내부) ══ -->
 
           <!-- 탭 1: 5도권 & 음도 -->
