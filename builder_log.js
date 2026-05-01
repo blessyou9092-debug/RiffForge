@@ -1636,70 +1636,35 @@ async function syncFromCloud() {
   }
 
   // ── 카드 렌더링 ───────────────────────────────────────────────────────────
-  function songCard(song, compact = false) {
+  function songCard(song, idx) {
     const sty = STATE_STYLES[song.state] || STATE_STYLES.learning;
     const pct = song.progress || 0;
     const dd = dday(song.deadline);
     const hasParts = (song.parts || []).length > 0;
-    const donePartsCount = hasParts ? (song.parts || []).filter(p => p.level === 3).length : 0;
 
     return `
-      <div class="bg-white rounded-xl border border-gray-200 shadow-sm ${compact ? 'p-2 space-y-1.5' : 'p-3 space-y-2'}">
-        <div class="flex items-start justify-between gap-2">
-          <div class="flex-1 min-w-0">
-            <p class="text-sm font-bold text-gray-800 truncate">${song.title}</p>
-            ${song.artist ? `<p class="text-xs text-gray-400">${song.artist}</p>` : ''}
-          </div>
-          <div class="flex items-center gap-1 shrink-0">
-            ${dd ? `<span class="text-xs font-bold px-1.5 py-0.5 bg-red-50 text-red-500 rounded-lg">${dd}</span>` : ''}
-            <span class="text-xs px-2 py-0.5 rounded-full font-bold ${sty.badge}">${STATE_LABELS[song.state]}</span>
-            <button onclick="RepertoireTracker.removeSong(${song.id})" class="text-gray-300 hover:text-red-400 text-xs ml-1 transition-colors">✕</button>
-          </div>
+      <div class="flex items-center gap-3 px-4 py-3 border-b border-gray-50 last:border-0 hover:bg-amber-50 transition-all group">
+        <span class="text-xs text-gray-300 w-5 shrink-0 hidden sm:block text-center">${idx + 1}</span>
+        <div class="flex-1 min-w-0 cursor-pointer" onclick="RepertoireTracker.openDetailModal(${song.id})">
+          <p class="text-sm font-bold text-gray-800 group-hover:text-amber-600 truncate transition-colors">${song.title}</p>
+          <p class="text-xs text-gray-400 truncate">${song.artist || '아티스트 없음'}</p>
         </div>
-
-        ${!compact ? `
-        <!-- 날짜 정보 -->
-        <div class="flex gap-3 text-[10px] text-gray-400">
-          <span>📅 ${song.addedAt ? new Date(song.addedAt).toLocaleDateString('ko-KR', { month: 'short', day: 'numeric' }) : '-'} 등록</span>
-          <span>🎸 최근 ${song.lastPracticedAt ? new Date(song.lastPracticedAt).toLocaleDateString('ko-KR', { month: 'short', day: 'numeric' }) : '없음'}</span>
-          ${hasParts ? `<span>파트 ${donePartsCount}/${(song.parts||[]).length} 완성</span>` : ''}
-        </div>
-
-        <!-- 완성도 바 -->
-        <div class="space-y-1">
-          <div class="flex justify-between text-xs text-gray-400">
-            <span>완성도${hasParts && !song.partsManual ? ' <span class="text-amber-500 text-[10px]">자동</span>' : ''}</span>
-            <span class="font-bold text-gray-700">${pct}%</span>
-          </div>
-          <input type="range" min="0" max="100" value="${pct}"
-            ${hasParts && !song.partsManual ? 'disabled' : `onchange="RepertoireTracker.setProgress(${song.id}, parseInt(this.value))"`}
-            class="w-full h-2 accent-amber-500 ${hasParts && !song.partsManual ? 'opacity-30 cursor-not-allowed' : 'cursor-pointer'}" />
+        <span class="text-xs px-2 py-0.5 rounded-full font-bold shrink-0 w-[72px] text-center ${sty.badge}">${STATE_LABELS[song.state]}</span>
+        <div class="hidden sm:flex flex-col items-center gap-0.5 w-14 shrink-0">
+          <span class="text-xs font-bold text-gray-700">${pct}%</span>
           <div class="w-full bg-gray-100 rounded-full h-1.5">
-            <div class="${sty.bar} h-1.5 rounded-full transition-all" style="width:${pct}%"></div>
+            <div class="${sty.bar} h-1.5 rounded-full" style="width:${pct}%"></div>
           </div>
         </div>
-        ` : ''}
-
-
-        ${!hasParts ? `
-        <div class="flex gap-2 flex-wrap text-xs">
-          <label class="flex items-center gap-1 text-gray-500">BPM:
-            <input type="number" min="40" max="300" value="${song.bpm || ''}" placeholder="120"
-              onchange="RepertoireTracker.setField(${song.id},'bpm',parseInt(this.value)||0)"
-              class="w-16 border border-gray-200 rounded px-1 py-0.5 text-xs focus:outline-none focus:border-amber-300" />
-          </label>
-        </div>` : ''}
-
-        <!-- 버튼 -->
-        <div class="flex gap-2">
+        <div class="hidden sm:block w-12 text-center shrink-0">
+          ${dd ? `<span class="text-xs font-bold px-1.5 py-0.5 bg-red-50 text-red-500 rounded-lg">${dd}</span>` : '<span class="text-xs text-gray-200">-</span>'}
+        </div>
+        <div class="flex gap-1 shrink-0">
           <button onclick="RepertoireTracker.practiceSong(${song.id})"
-            class="flex-1 text-xs py-1.5 bg-amber-500 hover:bg-amber-600 text-white font-bold rounded-lg transition-colors">
-            🎸 연습하기
-          </button>
-          <button onclick="RepertoireTracker.openDetailModal(${song.id})"
-            class="text-xs px-3 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-600 font-bold rounded-lg transition-colors">
-            상세 관리
-          </button>
+            class="text-xs px-2.5 py-1.5 bg-amber-500 hover:bg-amber-600 text-white font-bold rounded-lg transition-colors" title="연습하기">
+            🎸</button>
+          <button onclick="RepertoireTracker.removeSong(${song.id})"
+            class="text-xs px-2 py-1.5 bg-gray-100 hover:bg-red-50 hover:text-red-400 text-gray-400 font-bold rounded-lg transition-colors" title="삭제">✕</button>
         </div>
       </div>`;
   }
@@ -1711,20 +1676,27 @@ async function syncFromCloud() {
     const inProgress = songs.filter(s => s.state !== 'mastered');
     const mastered = songs.filter(s => s.state === 'mastered');
 
+    const tableHeader = `
+      <div class="flex items-center gap-3 px-4 py-2 bg-amber-50 border-b border-amber-100 text-[11px] font-black text-gray-400 uppercase tracking-wide">
+        <span class="w-5 shrink-0 hidden sm:block text-center">#</span>
+        <span class="flex-1">제목 / 아티스트</span>
+        <span class="w-[72px] text-center shrink-0">상태</span>
+        <span class="hidden sm:block w-14 text-center shrink-0">완성도</span>
+        <span class="hidden sm:block w-12 text-center shrink-0">마감</span>
+        <span class="w-16 text-right shrink-0">액션</span>
+      </div>`;
+
     board.innerHTML = `
       <div class="mb-6">
         <div class="flex items-center gap-2 mb-3">
           <h3 class="text-sm font-black text-gray-700">🎯 진행 중인 곡</h3>
           <span class="text-xs bg-blue-100 text-blue-700 font-bold px-2 py-0.5 rounded-full">${inProgress.length}곡</span>
-          <button onclick="RepertoireTracker.toggleCompact()"
-            class="text-[10px] px-2.5 py-1 rounded-lg border transition-all ${_compact
-              ? 'bg-amber-50 border-amber-200 text-amber-600 font-bold'
-              : 'bg-gray-50 border-gray-200 text-gray-400 hover:text-gray-600'}">
-            ${_compact ? '📋 간소화 ON' : '📋 간소화 보기'}
-          </button>
         </div>
         ${inProgress.length
-          ? `<div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3">${inProgress.map(s => songCard(s, _compact)).join('')}</div>`
+          ? `<div class="bg-white rounded-2xl border border-amber-100 shadow-sm overflow-hidden">
+               ${tableHeader}
+               ${inProgress.map((s, i) => songCard(s, i)).join('')}
+             </div>`
           : `<p class="text-sm text-gray-300 py-6 text-center">등록된 곡이 없습니다</p>`}
       </div>
       <div>
@@ -1733,7 +1705,10 @@ async function syncFromCloud() {
           <span class="text-xs bg-purple-100 text-purple-700 font-bold px-2 py-0.5 rounded-full">${mastered.length}곡</span>
         </div>
         ${mastered.length
-          ? `<div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3">${mastered.map(s => songCard(s, _compact)).join('')}</div>`
+          ? `<div class="bg-white rounded-2xl border border-purple-100 shadow-sm overflow-hidden">
+               ${tableHeader}
+               ${mastered.map((s, i) => songCard(s, i)).join('')}
+             </div>`
           : `<p class="text-sm text-gray-300 py-4 text-center">완성된 곡을 여기서 확인하세요</p>`}
       </div>`;
   }
