@@ -1176,6 +1176,7 @@ const AppSidebar = (() => {
     { id: 'studio', label: '메트로놈 & 백킹', icon: 'fa-music' },
     { id: 'tree', label: '기타 나무', icon: 'fa-seedling' },
     { id: 'reference', label: '참고 자료', icon: 'fa-book-open' },
+        { id: 'roadmap', label: '마스터리 로드맵', icon: 'fa-map' },
     { id: 'repertoire', label: '연습곡 관리', icon: 'fa-guitar' },
     { id: 'ranking', label: '크루 랭킹', icon: 'fa-ranking-star' },
     { id: 'board', label: '크루 게시판', icon: 'fa-comments' },
