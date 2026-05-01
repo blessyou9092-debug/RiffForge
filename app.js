@@ -1249,8 +1249,9 @@ const AppSidebar = (() => {
     if (id === 'builder') PracticeBuilder.init();
     if (id === 'tree') AppState.renderTreeGarden();
     if (id === 'studio') StudioUI.onEnter();
-    if (id === 'reference') ReferenceUI.onEnter();
-    if (id === 'repertoire') {
+if (id === 'reference') ReferenceUI.onEnter();
+if (id === 'roadmap') RoadmapUI.onEnter();    ← 신규 추가
+if (id === 'repertoire') {
     RepertoireTracker.render();            // 로컬 데이터 즉시 표시
     RepertoireTracker.syncFromCloud();     // 백그라운드 클라우드 동기화
     }
