@@ -3301,6 +3301,17 @@ const _CT_COLORS = {
   const _SEMI_LBL = { 0: 'R', 1: '♭2', 2: '2', 3: '♭3', 4: '3', 5: '4', 6: '♭5', 7: '5', 8: '♭6', 9: '6', 10: '♭7', 11: '7', 14: '9' };
 
   function renderChordToneRef() {
+    const ct = CONFIG.CHORD_TYPES.find(c => c.id === _chordToneType);
+    const intervals = ct?.intervals || [0, 4, 7];
+    const roles = ['root', 'third', 'fifth', 'seventh', 'ninth'];
+    const ri = CONFIG.NOTES.indexOf(_chordToneRoot);
+
+    // note → interval label 맵 (♭3, ♭7, 9 등 실제 음정 이름)
+    const ivLabelMap = new Map();
+    intervals.forEach(iv => {
+      ivLabelMap.set(CONFIG.NOTES[(ri + iv) % 12], _SEMI_LBL[iv] || String(iv));
+    });
+
     const map = _buildChordNoteMap(_chordToneRoot, _chordToneType);
     const showNote = _chordToneLabelMode === 'note';
 
@@ -3310,7 +3321,8 @@ const _CT_COLORS = {
       return {
         fill: c.fill, stroke: c.stroke, textFill: c.textFill,
         dotR: role === 'root' ? 11 : 9,
-        label: showNote ? note : (_CT_LBL[role] || note), opacity: 1
+        label: showNote ? note : (ivLabelMap.get(note) || note),
+        opacity: 1
       };
     };
 
@@ -3321,20 +3333,17 @@ const _CT_COLORS = {
 
     const legend = document.getElementById('ref-chord-tone-legend');
     if (legend) {
-      const ct = CONFIG.CHORD_TYPES.find(c => c.id === _chordToneType);
-      const intervals = ct?.intervals || [0, 4, 7];
-      const ri = CONFIG.NOTES.indexOf(_chordToneRoot);
-const roleColors = ['bg-orange-500', 'bg-sky-200', 'bg-sky-400', 'bg-blue-500', 'bg-indigo-400'];
       legend.innerHTML = intervals.map((iv, i) => {
         const note = CONFIG.NOTES[(ri + iv) % 12];
-        return `<span class="flex items-center gap-1">
-          <span class="inline-block w-3 h-3 rounded-full ${roleColors[i] || 'bg-gray-400'} shrink-0"></span>
-          <span class="text-[11px] font-black text-gray-700">${note}</span>
-          <span class="text-[10px] text-gray-400">${_SEMI_LBL[iv] || ''}</span>
+        const c = _CT_COLORS[roles[i]] || _CT_COLORS.root;
+        const ivLabel = _SEMI_LBL[iv] || String(iv);
+        return `<span class="flex items-center gap-1.5">
+          <span class="inline-block w-3 h-3 rounded-full shrink-0" style="background:${c.fill}"></span>
+          <span class="text-[11px] font-black text-gray-700">${ivLabel}</span>
+          <span class="text-[10px] text-gray-400">(${note})</span>
         </span>`;
       }).join('');
     }
-  }
 
   // ══════════════════════════════════════════════════════════════════════
   // 스케일 탭 (기존 유지)
