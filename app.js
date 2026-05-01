@@ -3692,7 +3692,7 @@ const VCOLS = { all: 'bg-gray-700', root: 'bg-amber-500', '1st': 'bg-indigo-500'
     setChordToneRoot, setChordToneType, setChordToneLabelMode,
     setRefFretMax,
     toggleCtProgMode, ctProgAdd, ctProgSelect, ctProgDelete,  };
-};
+})();
 
 // ═══════════════════════════════════════════════════════════════════════════
 // CrewBoard: 크루 게시판 (JSONBin 실시간 연동 + 댓글 수정/삭제)
