@@ -2581,6 +2581,7 @@ const ReferenceUI = (() => {
   let _chordToneRoot = 'A';
   let _chordToneType = 'major';
   let _chordToneLabelMode = 'interval'; // 'interval' | 'note'
+  let _refFretMax = 18;
   let _ctProgMode = false;
   let _ctProgression = []; // [{root, type}]
   let _ctProgIdx = -1;
@@ -2970,7 +2971,7 @@ const ReferenceUI = (() => {
 
       Fretboard.render('triad-fb-root', {
         rootNote: _triadRoot,
-        startFret: 0, endFret: 17,
+        startFret: 0, endFret: _refFretMax,
         chordNoteMap, activeStrings,
         noteColorFn: (fret, sIdx, note) => {
           const info = allDotMap.get(`${sIdx}-${fret}`);
@@ -3129,14 +3130,14 @@ function _getPentaPositions(rootNote, mode) {
     // 포지션 전체를 옥타브 이동
     const rawMax = Math.max(...rawNotes.map(n => n.fret));
     const rawMin = Math.min(...rawNotes.map(n => n.fret));
-    const shift = rawMax > 17 ? -12 : rawMin < 0 ? 12 : 0;
+    const shift = rawMax > _refFretMax ? -12 : rawMin < 0 ? 12 : 0;
     const mainNotes = rawNotes.map(({ si, fret, interval }) => ({ si, fret: fret + shift, interval }));
 
     // 옥타브 확장: ≥12 프렛은 -12 버전도, ≤4 프렛은 +12 버전도 추가
     const seen = new Set();
     const allNotes = [];
     function addNote(si, fret, interval) {
-      if (fret < 0 || fret > 17) return;
+      if (fret < 0 || fret > _refFretMax) return;
       const k = `${si}-${fret}`;
       if (seen.has(k)) return;
       seen.add(k);
@@ -3254,7 +3255,7 @@ function _getPentaPositions(rootNote, mode) {
 
     Fretboard.render('penta-full', {
       rootNote, scaleName,
-      startFret: 0, endFret: 17,
+      startFret: 0, endFret: _refFretMax,
       noteColorFn, gradientDefs,
     });
 
@@ -3313,7 +3314,7 @@ const _CT_COLORS = {
     };
 
     Fretboard.render('ref-chord-tone-svg', {
-      startFret: 0, endFret: 17, chordNoteMap: map,
+      startFret: 0, endFret: _refFretMax, chordNoteMap: map,
       chordRoot: _chordToneRoot, noteColorFn, labelMode: 'note',
     });
 
@@ -3380,8 +3381,8 @@ const roleColors = ['bg-orange-500', 'bg-sky-200', 'bg-sky-400', 'bg-blue-500', 
     });
     const scaleName = document.getElementById('ref-fretboard-scale')?.value || 'Minor Pentatonic';
     const rootNote = document.getElementById('ref-fretboard-key')?.value || 'A';
-    if (!pos) { Fretboard.updateRef({ startFret: 0, endFret: 17, scaleName, rootNote, noteColorFn: null }); return; }
-
+    if (!pos) { Fretboard.updateRef({ startFret: 0, endFret: _refFretMax, scaleName, rootNote, noteColorFn: null }); return; }
+    
     // CAGED 박스: 펜타 포지션 계산을 재활용
     const pentaMode = scaleName.includes('Major') ? 'major' : 'minor';
     const positions = _getPentaPositions(rootNote, pentaMode);
@@ -3403,8 +3404,7 @@ const noteColorFn = (fret, sIdx, note, _role) => {
     opacity: inZone ? 1 : 0.18, label: note,
   };
 };
-    Fretboard.updateRef({ startFret: 0, endFret: 17, scaleName, rootNote, noteColorFn });
-  }
+    Fretboard.updateRef({ startFret: 0, endFret: _refFretMax, scaleName, rootNote, noteColorFn });  }
 
   function setLabelMode(mode) {
     document.querySelectorAll('.label-mode-btn').forEach(btn => {
@@ -3658,6 +3658,19 @@ const VCOLS = { all: 'bg-gray-700', root: 'bg-amber-500', '1st': 'bg-indigo-500'
     });
     renderChordToneRef();
   }
+  function setRefFretMax(n) {
+    _refFretMax = n;
+    document.querySelectorAll('.ref-fret-btn').forEach(btn => {
+      const on = Number(btn.dataset.fret) === n;
+      btn.classList.toggle('bg-amber-500', on); btn.classList.toggle('text-white', on);
+      btn.classList.toggle('bg-white', !on); btn.classList.toggle('text-gray-600', !on);
+      btn.classList.toggle('border', !on);
+    });
+    renderTriadDiagram();
+    renderPentaPositions();
+    renderChordToneRef();
+    onScaleChange();
+  }
 
   // ── Public API ──────────────────────────────────────────────────────────
   return {
@@ -3667,6 +3680,7 @@ const VCOLS = { all: 'bg-gray-700', root: 'bg-amber-500', '1st': 'bg-indigo-500'
     setPentaPos, setPentaKey, setPentaView, setPentaLabel,
     setCagedPos, setLabelMode, onScaleChange,
     setChordToneRoot, setChordToneType, setChordToneLabelMode,
+    setRefFretMax,
     toggleCtProgMode, ctProgAdd, ctProgSelect, ctProgDelete,  };
 })();
 
