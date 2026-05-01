@@ -1921,6 +1921,21 @@
           </div>
 
         </section>
+        <!-- ══ 마스터리 로드맵 ════════════════════════════════════ -->
+        <section id="page-roadmap" class="page-section hidden max-w-4xl mx-auto">
+          <h2 class="text-xl font-black text-gray-800 mb-5">🗺️ 마스터리 로드맵</h2>
+
+          <!-- 로드맵 선택 탭 -->
+          <div class="overflow-x-auto mb-4">
+            <div id="roadmap-tabs" class="flex gap-2 bg-white rounded-2xl p-1.5 border border-amber-100 shadow-sm w-max"></div>
+          </div>
+
+          <!-- 진척도 -->
+          <div id="roadmap-progress" class="mb-4 p-3 bg-white rounded-2xl border border-amber-100 shadow-sm"></div>
+
+          <!-- 콘텐츠 -->
+          <div id="roadmap-content"></div>
+        </section>
 
         <!-- ══ 성장 스토리 ════════════════════════════════════════ -->
         <section id="page-export" class="page-section hidden max-w-2xl mx-auto">
@@ -1953,6 +1968,8 @@
   <script src="fretboard.js"></script>
   <script src="builder_log.js"></script>
   <script src="app.js"></script>
+  <script src="roadmap_data.js"></script>
+  <script src="roadmap.js"></script>
 
   <script>
     document.addEventListener('DOMContentLoaded', () => {
