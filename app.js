@@ -1601,6 +1601,7 @@ const StudioUI = (() => {
   let selectedKey = 'A';
   let editableProgression = [];   // [{root, type}]
   let _lastStudioChord = null;    // 마지막으로 표시된 코드 (정지 후에도 유지)
+  let _repeatCount = 0;
   // ── 유저 백킹 프리셋 ────────────────────────────────────────────────
   let _userPresets = [];
   try { _userPresets = JSON.parse(localStorage.getItem('rf_user_presets') || '[]'); } catch { _userPresets = []; }
@@ -1864,20 +1865,23 @@ function setSwing(val) {
     c.innerHTML = cards + addBtn + empties;
   }
 
-  function highlightChord(idx) {
-    document.querySelectorAll('.chord-card').forEach((el, i) => {
-      el.style.borderColor = i === idx ? '#FF6B00' : '';
-      el.style.boxShadow = i === idx ? '0 0 0 2px #FF6B0066' : '';
-    });
-    // 현재 코드톤을 지판에 표시 + 마지막 코드 기억
-    const chord = editableProgression[idx];
-    if (chord) {
-      _lastStudioChord = chord;
-      Fretboard.updateWithChordTones(chord);
-      updateChordLegend(chord);
-    }
+function highlightChord(idx) {
+  if (idx === 0 && _repeatCount >= 0) {
+    _repeatCount++;
+    const el = document.getElementById('repeat-count-display');
+    if (el) el.textContent = `🔁 ${_repeatCount}회`;
   }
-
+  document.querySelectorAll('.chord-card').forEach((el, i) => {
+    el.style.borderColor = i === idx ? '#FF6B00' : '';
+    el.style.boxShadow = i === idx ? '0 0 0 2px #FF6B0066' : '';
+  });
+  const chord = editableProgression[idx];
+  if (chord) {
+    _lastStudioChord = chord;
+    Fretboard.updateWithChordTones(chord);
+    updateChordLegend(chord);
+  }
+}
   function editChordRoot(i, root) {
     if (editableProgression[i]) editableProgression[i].root = root;
     _refreshChordName(i);
@@ -2050,12 +2054,15 @@ function setSwing(val) {
   }
 
 
-  function stopAll() {
-    _countInActive = false;
-    _countInBarsLeft = 0;
-    updateCountInDisplay(0);
-    Metronome.stop(); updateMetroBtn(false);
-    BackingEngine.stop();
+ function stopAll() {
+  _countInActive = false;
+  _countInBarsLeft = 0;
+  updateCountInDisplay(0);
+  _repeatCount = 0; 
+  const rcEl = document.getElementById('repeat-count-display');
+  if (rcEl) rcEl.textContent = ''; 
+  Metronome.stop(); updateMetroBtn(false);
+  BackingEngine.stop();
     const btn = document.getElementById('studio-play-btn');
     if (btn) { btn.textContent = '▶ 재생'; btn.style.background = 'linear-gradient(135deg,#FF6B00,#FF8C42)'; }
     document.querySelectorAll('.chord-card').forEach(el => { el.style.borderColor = ''; el.style.boxShadow = ''; });
